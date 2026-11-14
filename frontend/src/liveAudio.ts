@@ -31,21 +31,7 @@ export class OutputMeter {
   }
 }
 
-export function splitNarration(buffer: AudioBuffer, context: AudioContext) {
-  if (buffer.duration <= .5) return [buffer]
-  const stride = Math.floor(buffer.sampleRate * .5)
-  const samples = buffer.getChannelData(0)
-  const parts = []
-  for (let offset = 0; offset < samples.length; offset += stride) {
-    const source = samples.subarray(offset, Math.min(samples.length, offset + stride))
-    const part = context.createBuffer(1, source.length, buffer.sampleRate)
-    part.getChannelData(0).set(source)
-    parts.push(part)
-  }
-  return parts
-}
-
-export function isQuietNarrationEcho(frame: ArrayBuffer, referenceRms: number) {
+export function isQuietPlaybackEcho(frame: ArrayBuffer, referenceRms: number) {
   if (referenceRms < .02 || frame.byteLength < 2) return false
   const samples = new DataView(frame)
   let sum = 0

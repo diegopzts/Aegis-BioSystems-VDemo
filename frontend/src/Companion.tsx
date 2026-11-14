@@ -16,7 +16,7 @@ const prompts = [
 ]
 const voiceLabels = {
   disconnected: 'Voz desconectada', connecting: 'Conectando…', listening: 'Escuchando',
-  responding: 'Generando voz…', receiving: 'Recibiendo audio…', playing: 'Reproduciendo voz', recovering: 'Recuperando audio',
+  responding: 'Generando voz…', receiving: 'Recibiendo audio…', playing: 'Reproduciendo voz',
   suspended: 'Voz silenciada: audio pausado por el navegador', error: 'Error de voz',
   'text-only': 'Solo transcripción: Gemini no envió audio', 'no-audio': 'Gemini terminó sin audio',
   'audio-error': 'Error de voz: audio incompatible con esta versión',

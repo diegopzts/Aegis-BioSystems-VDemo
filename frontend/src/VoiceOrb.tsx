@@ -42,7 +42,7 @@ export function VoiceOrb({graph, breathing = false, alert = false, output = 0, s
   }, [graph])
 
   const available = Boolean(graph) && activity !== undefined
-  const amplitude = state === 'playing' || state === 'recovering' ? output : state === 'listening' ? activity ?? 0 : 0
+  const amplitude = state === 'playing' ? output : state === 'listening' ? activity ?? 0 : 0
   const intensity = Math.min(1, (amplitude / 100 + (alert ? .3 : 0)) * (breathing ? .55 : 1))
   return <section className="voice-orb-panel" aria-label="Actividad vocal estimada">
     <svg viewBox="0 0 64 64" className="voice-orb" data-active={state !== 'disconnected'} data-voice-state={state} style={{'--orb-intensity': intensity} as CSSProperties} aria-hidden="true">

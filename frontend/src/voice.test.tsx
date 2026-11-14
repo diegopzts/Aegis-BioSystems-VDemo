@@ -78,7 +78,7 @@ it('reuses audio and microphone across bounded backoff, ignores stale socket eve
 })
 
 
-import { isQuietNarrationEcho, OutputMeter } from './liveAudio'
+import { isQuietPlaybackEcho, OutputMeter } from './liveAudio'
 import type { Simulation } from './simulation'
 
 it('measures scheduled PCM only during playback and gates quiet residual audio only with a reference', () => {
@@ -90,9 +90,9 @@ it('measures scheduled PCM only during playback and gates quiet residual audio o
   expect(meter.read(2.31)).toBe(0)
   const quiet = new Int16Array(640).fill(120).buffer
   const speech = new Int16Array(640).fill(3500).buffer
-  expect(isQuietNarrationEcho(quiet, .25)).toBe(true)
-  expect(isQuietNarrationEcho(quiet, 0)).toBe(false)
-  expect(isQuietNarrationEcho(speech, .25)).toBe(false)
+  expect(isQuietPlaybackEcho(quiet, .25)).toBe(true)
+  expect(isQuietPlaybackEcho(quiet, 0)).toBe(false)
+  expect(isQuietPlaybackEcho(speech, .25)).toBe(false)
 })
 
 async function openPlayback() {
@@ -101,7 +101,7 @@ async function openPlayback() {
   const stops: ReturnType<typeof vi.fn>[] = []
   const connections: ReturnType<typeof vi.fn>[] = []
   const destination = {}
-  const sources: {onended?: (() => void) | null}[] = []
+  const sources: {onended?: (() => void) | null; buffer?: AudioBuffer}[] = []
   const sockets: Socket[] = []
   let clock = 0
   class Socket {
@@ -122,9 +122,9 @@ async function openPlayback() {
     close = vi.fn().mockResolvedValue(undefined)
     audioWorklet = {addModule: vi.fn().mockResolvedValue(undefined)}
     createMediaStreamSource() {return {connect: vi.fn(), disconnect: vi.fn()}}
-    createBuffer(_channels: number, length: number, sampleRate: number) {
+    createBuffer(numberOfChannels: number, length: number, sampleRate: number) {
       const samples = new Float32Array(length)
-      return {getChannelData: () => samples, sampleRate, duration: length / sampleRate}
+      return {getChannelData: () => samples, length, numberOfChannels, sampleRate, duration: length / sampleRate}
     }
     createBufferSource() {
       const start = vi.fn(), stop = vi.fn()
@@ -151,7 +151,7 @@ async function openPlayback() {
   const socket = sockets[0]
   const id = socket.url.searchParams.get('session_id')
   const event = (type: string, extra = {}) => socket.onmessage?.({data: JSON.stringify({type, ...extra})})
-  const pcm = () => socket.onmessage?.({data: new Int16Array(960).fill(6553).buffer})
+  const pcm = (sample = 6553) => socket.onmessage?.({data: new Int16Array(960).fill(sample).buffer})
   return {result, rerender, unmount, played, stops, sources, connections, destination, sockets, getUserMedia,
     event, pcm, id, setClock: (value: number) => { clock = value }}
 }
@@ -193,6 +193,41 @@ it('plays ordinary voice on the destination and distinguishes text-only and inco
   expect(next.result.current.diagnostics.rejected).toBe(1)
   expect(next.played).toHaveLength(0)
   next.unmount()
+})
+
+it('plays all ordinary speech in order after Gemini finishes generating faster than playback', async () => {
+  const {result, played, sources, event, pcm, id, setClock, unmount} = await openPlayback()
+  const turn = {session_id: id, turn: 1}
+  act(() => {
+    event('state', {value: 'listening'})
+    event('audio_format', {rate: 24000, channels: 1})
+    for (let sequence = 1; sequence <= 100; sequence++) {
+      event('audio_chunk', {...turn, sequence})
+      pcm(sequence)
+    }
+    event('transcript', {...turn, role: 'assistant', text: 'La respuesta ya está escrita.', finished: true})
+    event('generation_end', turn)
+    event('turn_end', turn)
+  })
+  expect(result.current.diagnostics.received).toBe(100)
+  expect(result.current.diagnostics.pendingMs).toBeGreaterThanOrEqual(4000)
+  act(() => {
+    for (let tick = 1; tick <= 120; tick++) {
+      const now = tick * .035
+      setClock(now)
+      sources.forEach((source, i) => {
+        const [start, , duration] = played[i].mock.calls[0]
+        if (start + duration <= now) source.onended?.()
+      })
+      vi.advanceTimersByTime(35)
+    }
+  })
+  const samples = sources.map(source => source.buffer!.getChannelData(0)[0] * 32768)
+  expect(samples.filter((sample, i) => i === 0 || sample !== samples[i - 1])).toEqual(
+    Array.from({length: 100}, (_, i) => i + 1))
+  expect(played.reduce((duration, start) => duration + start.mock.calls[0][2], 0)).toBeCloseTo(4)
+  expect(result.current.diagnostics).toMatchObject({pendingMs: 0, droppedMs: 0})
+  unmount()
 })
 
 it('drains accepted narration across scenario changes and endings, rejects stale frames, and honors interruption', async () => {

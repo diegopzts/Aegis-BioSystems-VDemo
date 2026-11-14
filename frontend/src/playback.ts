@@ -1,8 +1,9 @@
 const LEAD = 0.025
 const LOOKAHEAD = 0.18
-const MAX_PENDING = 1.5
-const RETAIN = 0.75
-const MAX_CHUNKS = 128
+const MAX_SOURCES = 128
+const MAX_BUFFER_BYTES = 32 * 1024 * 1024
+const MAX_BUFFER_COUNT = 8192
+type Chunk = {buffer: AudioBuffer; offset: number; bytes: number; references: number}
 
 export function decodePcm(data: ArrayBuffer, rate: number, channels: number, context: AudioContext) {
   if (channels !== 1 || !Number.isInteger(rate) || rate < 8000 || rate > 96000 ||
@@ -15,8 +16,10 @@ export function decodePcm(data: ArrayBuffer, rate: number, channels: number, con
 }
 
 export class PlaybackQueue {
-  private chunks: {buffer: AudioBuffer; offset: number}[] = []
+  private chunks: Chunk[] = []
   private sources = new Set<AudioBufferSourceNode>()
+  private bufferCount = 0
+  private bufferedBytes = 0
   private cursor = 0
   private queued = 0
   private dropped = 0
@@ -29,25 +32,29 @@ export class PlaybackQueue {
   }
 
   push(buffer: AudioBuffer) {
-    this.chunks.push({buffer, offset: 0})
-    this.queued += buffer.duration
-    if (this.queued <= MAX_PENDING && this.chunks.length <= MAX_CHUNKS) return false
-    while (this.chunks.length && (this.queued > RETAIN || this.chunks.length > MAX_CHUNKS)) {
-      const oldest = this.chunks[0]
-      const duration = oldest.buffer.duration - oldest.offset
-      const trim = this.chunks.length > MAX_CHUNKS ? duration : Math.min(duration, this.queued - RETAIN)
-      oldest.offset += trim
-      this.queued -= trim
-      this.dropped += trim
-      if (trim >= duration) this.chunks.shift()
+    const bytes = buffer.length * buffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT
+    if (this.bufferedBytes + bytes > MAX_BUFFER_BYTES || this.bufferCount >= MAX_BUFFER_COUNT) {
+      this.dropped += buffer.duration
+      return false
     }
+    this.bufferedBytes += bytes
+    this.bufferCount++
+    this.chunks.push({buffer, offset: 0, bytes, references: 1})
+    this.queued += buffer.duration
     return true
+  }
+
+  private releaseChunk(chunk: Chunk) {
+    if (--chunk.references === 0) {
+      this.bufferCount--
+      this.bufferedBytes -= chunk.bytes
+    }
   }
 
   pump() {
     if (this.context.state !== 'running') return
     const now = this.context.currentTime
-    while (this.chunks.length && this.cursor < now + LOOKAHEAD && this.sources.size < MAX_CHUNKS) {
+    while (this.chunks.length && this.cursor < now + LOOKAHEAD && this.sources.size < MAX_SOURCES) {
       const chunk = this.chunks[0]
       const start = this.cursor <= now ? now + LEAD : this.cursor
       const remaining = chunk.buffer.duration - chunk.offset
@@ -57,16 +64,20 @@ export class PlaybackQueue {
       source.buffer = chunk.buffer
       source.connect(this.context.destination)
       source.onended = () => {
-        this.sources.delete(source)
+        if (this.sources.delete(source)) this.releaseChunk(chunk)
         source.disconnect()
       }
       source.start(start, chunk.offset, duration)
-      this.onSchedule?.(chunk.buffer, start, chunk.offset, duration)
+      chunk.references++
       this.sources.add(source)
+      this.onSchedule?.(chunk.buffer, start, chunk.offset, duration)
       this.cursor = start + duration
       this.queued = Math.max(0, this.queued - duration)
       chunk.offset += duration
-      if (duration >= remaining) this.chunks.shift()
+      if (duration >= remaining) {
+        this.chunks.shift()
+        this.releaseChunk(chunk)
+      }
     }
   }
 
@@ -77,6 +88,8 @@ export class PlaybackQueue {
       source.disconnect()
     }
     this.sources.clear()
+    this.bufferCount = 0
+    this.bufferedBytes = 0
     this.chunks = []
     this.queued = 0
     this.cursor = 0

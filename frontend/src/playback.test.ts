@@ -19,7 +19,8 @@ function audioContext() {
   return {context, nodes, queue: new PlaybackQueue(context as unknown as AudioContext)}
 }
 
-const chunk = (duration: number) => ({duration} as AudioBuffer)
+const chunk = (duration: number, length = duration * 24000) =>
+  ({duration, length, numberOfChannels: 1} as AudioBuffer)
 
 describe('streaming playback', () => {
   it('decodes little-endian signed mono PCM using the advertised rate and rejects invalid framing', () => {
@@ -34,8 +35,8 @@ describe('streaming playback', () => {
 
   it('schedules ordinary chunks contiguously, releases finished nodes, and rebases after a gap', () => {
     const {queue, context, nodes} = audioContext()
-    expect(queue.push(chunk(.04))).toBe(false)
-    expect(queue.push(chunk(.04))).toBe(false)
+    expect(queue.push(chunk(.04))).toBe(true)
+    expect(queue.push(chunk(.04))).toBe(true)
     queue.pump()
     expect(nodes[0].start.mock.calls[0][0]).toBeCloseTo(10.025)
     expect(nodes[1].start.mock.calls[0][0]).toBeCloseTo(10.065)
@@ -48,22 +49,27 @@ describe('streaming playback', () => {
     expect(queue.diagnostics.droppedMs).toBe(0)
   })
 
-  it('bounds a 14-second burst, retains recent audio, and clears on interruption while suspended', () => {
+  it('rejects new audio at the memory ceiling without replacing audio waiting to play', () => {
     const {queue, context, nodes} = audioContext()
     context.state = 'suspended'
-    for (let i = 0; i < 350; i++) queue.push(chunk(.04))
+    expect(queue.push(chunk(.04, 32 * 1024 * 1024 / 4))).toBe(true)
+    expect(queue.push(chunk(.08))).toBe(false)
     queue.pump()
     expect(nodes).toHaveLength(0)
-    expect(queue.diagnostics.pendingMs).toBeLessThanOrEqual(1500)
-    expect(queue.diagnostics.droppedMs).toBeGreaterThan(12000)
+    expect(queue.diagnostics.pendingMs).toBe(40)
+    expect(queue.diagnostics.droppedMs).toBe(80)
     context.state = 'running'
     queue.pump()
-    expect(nodes.length).toBeGreaterThan(0)
-    expect(nodes.at(-1)!.start.mock.calls[0][0]).toBeLessThan(10.18)
+    expect(nodes[0].start.mock.calls[0][2]).toBeCloseTo(.04)
+    expect(queue.push(chunk(.04))).toBe(false)
+    nodes[0].onended?.()
+    expect(queue.push(chunk(.04))).toBe(true)
+    queue.pump()
     queue.clear()
     expect(queue.diagnostics.pendingMs).toBe(0)
     expect(queue.diagnostics.chunks).toBe(0)
-    expect(nodes.every(node => node.stop.mock.calls.length === 1 && node.onended === null)).toBe(true)
+    expect(nodes[0].stop).not.toHaveBeenCalled()
+    expect(nodes[1].stop).toHaveBeenCalledOnce()
   })
 })
 

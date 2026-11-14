@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { actionList, changeSchema, type Action, type Change, type Scenario, type WorkspaceView } from './contracts'
 import { decodePcm, PlaybackQueue } from './playback'
-import { isQuietNarrationEcho, OutputMeter, splitNarration } from './liveAudio'
+import { isQuietPlaybackEcho, OutputMeter } from './liveAudio'
 import { acquireAudio } from './audioContext'
 import { simulationSchema, type Simulation } from './simulation'
 
 export type VoiceState = 'disconnected' | 'connecting' | 'listening' | 'responding' | 'receiving' | 'playing' |
-  'recovering' | 'suspended' | 'text-only' | 'no-audio' | 'audio-error' | 'error'
+  'suspended' | 'text-only' | 'no-audio' | 'audio-error' | 'error'
 type Transcript = {id: string; role: 'user' | 'assistant'; text: string; finished: boolean}
 type Diagnostics = {pendingMs: number; chunks: number; droppedMs: number; reconnects: number; interruptions: number; received: number; rejected: number}
 const emptyDiagnostics = {pendingMs: 0, chunks: 0, droppedMs: 0, reconnects: 0, interruptions: 0, received: 0, rejected: 0}
-type TurnInfo = {turn: number; narrative: string | null; event?: string}
 const backoff = [500, 1500, 3500]
 
 export function liveSocketUrl(page: string) {
@@ -23,8 +22,8 @@ type Session = {
   context: AudioContext; releaseAudio: () => Promise<void>; queue: PlaybackQueue; stream?: MediaStream; socket?: WebSocket;
   capture?: AudioWorkletNode; input?: MediaStreamAudioSourceNode; timer?: number; retry?: number;
   id: string; handshake?: number; reconnects: number; connection: number; linked: boolean; interruptions: number;
-  ready: boolean; responding: boolean; recoverUntil: number; meter: OutputMeter;
-  drain?: () => void; narrative?: TurnInfo; staged: AudioBuffer[]; stagedSeconds: number
+  ready: boolean; responding: boolean; meter: OutputMeter;
+  drain?: () => void
   received: number; rejected: number; outcome?: 'text-only' | 'no-audio' | 'audio-error'
 }
 
@@ -42,8 +41,6 @@ function closeSocket(session: Session) {
 function clearAudio(session: Session) {
   session.queue.clear()
   session.meter.clear()
-  session.staged.length = 0
-  session.stagedSeconds = 0
 }
 
 function release(session: Session) {
@@ -145,7 +142,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       const meter = new OutputMeter()
       session = {context, meter, id: crypto.randomUUID(), releaseAudio: lease.release,
         queue: new PlaybackQueue(context, (buffer, start, offset, duration) => meter.schedule(buffer, start, offset, duration)), reconnects: 0, connection: 0, interruptions: 0,
-        linked: false, ready: false, responding: false, recoverUntil: 0, staged: [], stagedSeconds: 0, received: 0, rejected: 0}
+        linked: false, ready: false, responding: false, received: 0, rejected: 0}
       sessionRef.current = session
       await context.resume()
       if (version !== ticket.current) return
@@ -166,8 +163,8 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       capture.port.onmessage = ({data}: MessageEvent<ArrayBuffer>) => {
         const socket = session.socket
         if (session.ready && socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 32_768) {
-          const rms = session.narrative ? session.meter.read(session.context.currentTime) : 0
-          socket.send(isQuietNarrationEcho(data, rms) ? new ArrayBuffer(data.byteLength) : data)
+          const rms = session.meter.read(session.context.currentTime)
+          socket.send(isQuietPlaybackEcho(data, rms) ? new ArrayBuffer(data.byteLength) : data)
         }
       }
     } catch (error) {
@@ -181,22 +178,11 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
 
     function updatePlayback() {
       if (sessionRef.current !== session) return
-      // Narrative PCM can arrive faster than real time. Admit it below the existing queue's
-      // overflow threshold, without changing its playback cursor or live conversation policy.
-      while (session.staged.length && session.queue.diagnostics.pendingMs + session.staged[0].duration * 1000 < 1250 &&
-          session.queue.diagnostics.chunks < 96) {
-        const buffer = session.staged.shift()!
-        session.stagedSeconds = Math.max(0, session.stagedSeconds - buffer.duration)
-        session.queue.push(buffer)
-      }
       try { session.queue.pump() }
       catch { fail('El navegador no pudo conectar o iniciar la salida de voz.'); return }
       const stats = session.queue.diagnostics
-      stats.pendingMs += Math.round(session.stagedSeconds * 1000)
-      stats.chunks += session.staged.length
       const running = session.context.state === 'running'
       setOutputLevel(running ? Math.round(Math.min(1, session.meter.read(session.context.currentTime) * 5) * 100) : 0)
-      if (!stats.chunks && !stats.pendingMs && !session.responding) session.narrative = undefined
       if (!stats.chunks && !stats.pendingMs && session.drain) {
         const resumeConnection = session.drain
         session.drain = undefined
@@ -208,27 +194,25 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
         previous.received === session.received && previous.rejected === session.rejected
         ? previous : {...stats, reconnects: session.reconnects, interruptions: session.interruptions, received: session.received, rejected: session.rejected})
       if (session.context.state !== 'running') { setState('suspended'); return }
-      if (!session.ready) { setState('connecting'); return }
-      if (performance.now() < session.recoverUntil) setState('recovering')
-      else if (session.meter.playing(session.context.currentTime)) setState('playing')
+      if (session.meter.playing(session.context.currentTime)) setState('playing')
       else if (stats.chunks || stats.pendingMs) setState('receiving')
+      else if (!session.ready) setState('connecting')
       else setState(session.outcome ?? (session.responding ? 'responding' : 'listening'))
     }
     session.context.onstatechange = updatePlayback
     session.timer = window.setInterval(updatePlayback, 35)
 
-    function reconnect(message: string) {
+    function reconnect(message: string, retry = true) {
       closeSocket(session)
       session.responding = false
-      if (session.staged.length || session.queue.diagnostics.chunks || session.queue.diagnostics.pendingMs) {
-        session.drain = () => reconnect(message)
+      if (session.queue.diagnostics.chunks || session.queue.diagnostics.pendingMs) {
+        session.drain = () => reconnect(message, retry)
+        if (!retry) setError(message)
         return
       }
       session.meter.clear()
-      session.narrative = undefined
       session.outcome = undefined
-      session.recoverUntil = 0
-      if (session.reconnects >= backoff.length) { fail(message); return }
+      if (!retry || session.reconnects >= backoff.length) { fail(message); return }
       const delay = backoff[session.reconnects++]
       setState('connecting')
       session.retry = window.setTimeout(connect, delay)
@@ -249,7 +233,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       session.socket = socket
       socket.binaryType = 'arraybuffer'
       const isCurrent = () => sessionRef.current === session && session.socket === socket
-      let pendingChunk: TurnInfo | undefined
+      let pendingTurn: number | undefined
       let lastSequence = 0
       let terminalTurn = 0
       let activeTurn = 0
@@ -276,7 +260,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       }
       socket.onclose = ({code}) => {
         if (!isCurrent()) return
-        if (code === 1008 || code === 1003) fail('Gemini Live rechazó la conexión de voz.')
+        if (code === 1008 || code === 1003) reconnect('Gemini Live rechazó la conexión de voz.', false)
         else reconnect('Se perdió la conexión de voz. Pulsa Reconectar.')
       }
       socket.onerror = () => {
@@ -285,29 +269,26 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       socket.onmessage = ({data}: MessageEvent<string | ArrayBuffer>) => {
         if (!isCurrent()) return
         if (typeof data !== 'string') {
-          const metadata = pendingChunk
-          pendingChunk = undefined
+          const turn = pendingTurn
+          pendingTurn = undefined
           const ignored = discardedHeader
           discardedHeader = false
-          if (ignored || (metadata && (metadata.turn <= Math.max(terminalTurn, interruptTurn) || metadata.turn < activeTurn))) return
-          if (metadata) beginTurn(metadata.turn)
+          if (ignored || (turn && (turn <= Math.max(terminalTurn, interruptTurn) || turn < activeTurn))) return
+          if (turn) beginTurn(turn)
           let buffer: AudioBuffer | undefined
-          try { buffer = metadata && format ? decodePcm(data, format.rate, format.channels, session.context) : undefined }
+          try { buffer = turn && format ? decodePcm(data, format.rate, format.channels, session.context) : undefined }
           catch { fail('El navegador no pudo preparar el audio de Gemini.'); return }
           if (buffer) {
+            if (!session.queue.push(buffer)) {
+              reconnect('Se alcanzó el límite de audio en espera. Se reproducirá el audio que ya llegó. Pulsa Reconectar al terminar.', false)
+              updatePlayback()
+              return
+            }
             turnReceived++
             session.received++
             session.responding = true
-            if (metadata?.narrative || session.staged.length) {
-              if (session.stagedSeconds + buffer.duration > 90 || session.staged.length >= 2048) {
-                fail('Gemini envió más audio del que la narrativa puede conservar. Reconecta para continuar.')
-                return
-              }
-              for (const part of splitNarration(buffer, session.context)) session.staged.push(part)
-              session.stagedSeconds += buffer.duration
-            } else if (session.queue.push(buffer)) session.recoverUntil = performance.now() + 800
           } else {
-            if (!metadata) unframed = true
+            if (!turn) unframed = true
             turnRejected++
             session.rejected++
             session.outcome = 'audio-error'
@@ -319,7 +300,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
         try { event = JSON.parse(data) } catch { return }
         if (!event || typeof event !== 'object') return
         if (event.session_id != null && event.session_id !== session.id) {
-          if (event.type === 'audio_chunk') { pendingChunk = undefined; discardedHeader = true }
+          if (event.type === 'audio_chunk') { pendingTurn = undefined; discardedHeader = true }
           return
         }
         const hasTurn = Number.isSafeInteger(event.turn) && event.turn > 0
@@ -328,18 +309,17 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
           narrative: event.narrative_id ?? null, event: event.type})
         switch (event.type) {
           case 'audio_chunk':
-            pendingChunk = undefined
+            pendingTurn = undefined
             discardedHeader = true
             if (currentTurn && Number.isSafeInteger(event.sequence) && event.sequence > lastSequence) {
               lastSequence = event.sequence
-              pendingChunk = {turn: event.turn, narrative: event.narrative_id ?? null, event: event.event_id}
+              pendingTurn = event.turn
               discardedHeader = false
             }
             break
           case 'narrative_start':
             if (currentTurn) {
               beginTurn(event.turn)
-              session.narrative = {turn: event.turn, narrative: event.narrative_id}
               session.responding = true
               report()
             }
@@ -358,8 +338,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
             break
           case 'error': {
             const message = typeof event.message === 'string' ? event.message : 'Gemini Live no está disponible.'
-            if (event.retryable === true) reconnect(message)
-            else fail(message)
+            reconnect(message, event.retryable === true)
             return
           }
           case 'state':
@@ -379,19 +358,17 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
             if (!currentTurn || event.turn <= interruptTurn) break
             interruptTurn = event.turn
             session.interruptions++
-            pendingChunk = undefined
+            pendingTurn = undefined
             clearAudio(session)
-            session.narrative = undefined
             setOutputLevel(0)
             report()
-            session.recoverUntil = 0
             session.responding = false
             break
           case 'turn_end':
             if (!currentTurn) break
             beginTurn(event.turn)
             terminalTurn = event.turn
-            pendingChunk = undefined
+            pendingTurn = undefined
             session.responding = false
             session.outcome = turnRejected || unframed ? 'audio-error' : turnReceived || interruptTurn === event.turn ? undefined :
               turnText ? 'text-only' : 'no-audio'
