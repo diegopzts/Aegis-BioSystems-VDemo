@@ -4,6 +4,7 @@ import { post, useResource } from './api'
 import { ScenarioBar } from './ScenarioBar'
 import { OrbitalSlot, useOrbitalUi } from './orbitalUi'
 import { OrbitalMonitor } from './OrbitalMonitor'
+import { QuickGuide } from './QuickGuide'
 import { useOrbitalWelcome } from './orbitalWelcome'
 import { simulationSchema, type Simulation, type SituationId } from './simulation'
 import { Companion, type CompanionControls, type CompanionVoiceStatus } from './Companion'
@@ -233,6 +234,7 @@ export function App() {
         <footer className="main-footer"><span>Beyond Monitoring. Towards Prevention.</span><span>Educational demo · Use qualified human support for medical decisions.</span></footer>
         </div>
       </main>
+      {orbital && !orbitalFocused && !companion && !mobileNav && !zero && <QuickGuide/>}
     </div>
     {(everOpened || orbitalUi.orbital) && <Companion ref={companionControls} orbital={orbital} waitForWelcome={welcome.wait}
       visible={companion} breathing={breathing} simulation={simulation} onSimulation={syncSimulation} onVoiceStatus={setVoiceStatus} context={context} ui={{section, metric, range: span, region, view, crewId}} availability={health.error ? 'error' : health.data?.geminiStatus ?? 'checking'}
