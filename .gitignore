@@ -33,6 +33,7 @@ backend/data/
 secrets/
 credentials/
 *.wav
+!frontend/public/aegis-welcome.wav
 *.mp3
 *.pcm
 *.ogg

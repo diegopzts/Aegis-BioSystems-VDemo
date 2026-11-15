@@ -142,6 +142,10 @@ def test_config_reads_backend_dotenv_from_any_cwd(monkeypatch, tmp_path):
     assert result["API_KEY"] == "local-sentinel"
     assert result["TEXT_MODEL"] == config.DEFAULT_TEXT_MODEL
     assert result["LIVE_MODEL"] == "auto"
+    monkeypatch.setenv("AEGIS_ORBITAL_UI_ENABLED", "1")
+    assert runpy.run_path(str(config_copy))["ORBITAL_UI_ENABLED"] is True
+    monkeypatch.setenv("AEGIS_ORBITAL_UI_ENABLED", "0")
+    assert runpy.run_path(str(config_copy))["ORBITAL_UI_ENABLED"] is False
     monkeypatch.setenv("GEMINI_API_KEY", "environment-sentinel")
     assert runpy.run_path(str(config_copy))["API_KEY"] == "environment-sentinel"
     monkeypatch.setenv("GEMINI_API_KEY", " ")

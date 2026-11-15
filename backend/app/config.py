@@ -11,6 +11,7 @@ TEXT_MODEL = (env.get("GEMINI_MODEL") or "").strip() or DEFAULT_TEXT_MODEL
 LIVE_MODEL = (env.get("GEMINI_LIVE_MODEL") or "").strip() or "auto"
 EXTERNAL_ORIGIN = (env.get("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
 PUBLIC_DEMO = bool(EXTERNAL_ORIGIN) or env.get("AEGIS_PUBLIC_DEMO") == "1"
+ORBITAL_UI_ENABLED = (env.get("AEGIS_ORBITAL_UI_ENABLED") or "").strip().lower() in {"1", "true"}
 FRONTEND_DIST = Path(env.get("AEGIS_FRONTEND_DIST") or BACKEND.parent / "frontend" / "dist")
 LOCAL_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ORIGINS = [

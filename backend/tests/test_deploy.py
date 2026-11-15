@@ -5,6 +5,19 @@ from starlette.websockets import WebSocketDisconnect
 from app import config, main
 
 
+@pytest.mark.parametrize("enabled", [False, True])
+def test_public_ui_config_only_exposes_flag(monkeypatch, enabled):
+    monkeypatch.setattr(config, "ORBITAL_UI_ENABLED", enabled)
+    monkeypatch.setattr(config, "PUBLIC_DEMO", True)
+    monkeypatch.setattr(config, "API_KEY", "private-value")
+    with TestClient(main.app) as api:
+        response = api.get("/api/config")
+        assert response.status_code == 200
+        assert response.json() == {"orbitalUiEnabled": enabled}
+        assert response.headers["cache-control"] == "no-store"
+        assert "set-cookie" not in response.headers
+
+
 def test_spa_fallback_keeps_api_and_missing_assets_separate(tmp_path, monkeypatch):
     (tmp_path / "index.html").write_text("<main>AEGIS SPA</main>", encoding="utf-8")
     (tmp_path / "pcm-capture.js").write_text("// worklet", encoding="utf-8")

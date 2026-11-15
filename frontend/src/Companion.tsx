@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type FormEvent, type Ref } from 'react'
 import { AudioLines, Mic, Send, Sparkles, Square, X } from 'lucide-react'
 import { post, request, useResource } from './api'
 import { changeSchema, replySchema, type Action, type Change, type Message, type Position, type WorkspaceView } from './contracts'
 import { CheckinSettings, type CheckinPromptState } from './checkinPrompt'
-import { useVoice } from './voice'
+import { useVoice, type VoiceState } from './voice'
 import { VoiceOrb } from './VoiceOrb'
 import type { InputGraph, Simulation } from './simulation'
 
@@ -27,15 +27,18 @@ const operations: Record<string, string> = {
   reset_mission: 'Reiniciar simulación', undo: 'Deshacer cambio',
 }
 type Activity = {id: number; operation: string; target: string; date: string; result: string; undoable: boolean}
+export type CompanionVoiceStatus = {label: string; playing: boolean; graph?: InputGraph; state: VoiceState; output: number}
+export type CompanionControls = {startFromOrbit: (welcome: () => Promise<void>) => void}
 type Props = {
   context: Position; ui: WorkspaceView; visible: boolean; breathing?: boolean; simulation?: Simulation;
   onSimulation: (value: Simulation) => void;
-  onVoiceStatus: (value: {label: string; playing: boolean; graph?: InputGraph}) => void;
+  onVoiceStatus: (value: CompanionVoiceStatus) => void;
+  ref?: Ref<CompanionControls>; orbital?: boolean; waitForWelcome?: () => Promise<void>;
   availability: 'configured' | 'unconfigured' | 'checking' | 'error'; onActions: (actions: Action[]) => void;
   onChange: (change: Change) => void; close: () => void; checkin: CheckinPromptState
 }
 
-export function Companion({context, ui, visible, breathing, simulation, onSimulation, onVoiceStatus, availability, onActions, onChange, close, checkin}: Props) {
+export function Companion({context, ui, visible, breathing, simulation, onSimulation, onVoiceStatus, availability, onActions, onChange, close, checkin, ref, orbital, waitForWelcome}: Props) {
   const {scenario, day} = context
   const [messages, setMessages] = useState<Message[]>([])
   const [sources, setSources] = useState<string[]>([])
@@ -53,12 +56,18 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
   const {acceptSimulation, inputGraph, state: playbackState, diagnostics} = voice
   const playing = diagnostics.pendingMs > 0 && playbackState !== 'suspended'
   useEffect(() => {
-    onVoiceStatus({label: voiceLabels[playbackState], playing, graph: inputGraph})
-  }, [onVoiceStatus, playbackState, playing, inputGraph])
+    onVoiceStatus({label: voiceLabels[playbackState], playing, graph: inputGraph, state: playbackState, output: voice.outputLevel})
+  }, [onVoiceStatus, playbackState, playing, inputGraph, voice.outputLevel])
   const greetingTranscribed = voice.transcripts.some(item => item.role === 'assistant' && item.text.includes(greeting))
   useEffect(() => { if (simulation) acceptSimulation(simulation) }, [simulation, acceptSimulation])
   const configured = availability === 'configured'
   const speaking = voice.state !== 'disconnected' && voice.state !== 'error'
+  useImperativeHandle(ref, () => ({
+    startFromOrbit(welcome) {
+      if (configured) void voice.start({welcome, allowNoMic: true})
+      else if (!speaking) void welcome()
+    },
+  }))
 
   useEffect(() => { if (visible) input.current?.focus(); else voice.stop() }, [visible, voice.stop])
   useEffect(() => { if (visible) end.current?.scrollIntoView?.({block: 'nearest'}) }, [visible, messages, pending])
@@ -139,7 +148,7 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
       <div><h2>AEGIS AI Companion</h2><p>Bienestar durante la misión · Google Gemini</p></div>
       <button className="icon-button" onClick={close} aria-label="Cerrar asistente"><X size={18}/></button>
     </header>
-    {visible && <VoiceOrb graph={inputGraph} breathing={breathing} output={voice.outputLevel} state={voice.state}
+    {visible && !orbital && <VoiceOrb graph={inputGraph} breathing={breathing} output={voice.outputLevel} state={voice.state}
       label={voiceLabels[voice.state]} alert={Boolean(simulation && simulation.scenario_id !== 'nominal')}/>}
     <div className="chat-log">
       <p className="muted">AEGIS es una demostración con datos sintéticos y no sustituye el apoyo de profesionales de salud mental.</p>
@@ -177,7 +186,7 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
 
     <div className="voice-strip">
       <AudioLines size={18} className={speaking ? 'pulse' : ''}/><span role="status">{voiceLabels[voice.state]}</span>
-      <button className="button" disabled={!configured || busy} onClick={speaking ? voice.stop : voice.start}>
+      <button className="button" disabled={!configured || busy} onClick={speaking ? voice.stop : () => void voice.start({welcome: waitForWelcome})}>
         {speaking ? <Square size={13}/> : <Mic size={14}/>} {speaking ? 'Detener voz' : voice.state === 'error' ? 'Reconectar' : 'Iniciar voz'}
       </button>
     </div>

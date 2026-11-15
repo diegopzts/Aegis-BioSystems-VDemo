@@ -8,7 +8,7 @@ COPY frontend/public ./public
 RUN npm run build
 
 FROM python:3.14-slim-bookworm
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 AEGIS_PUBLIC_DEMO=1
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 AEGIS_PUBLIC_DEMO=1 AEGIS_ORBITAL_UI_ENABLED=1
 WORKDIR /app/backend
 COPY backend/requirements-runtime.txt ./
 RUN python -m pip install --no-cache-dir -r requirements-runtime.txt

@@ -1,0 +1,217 @@
+.app-shell:has(.orbital-experience) {
+  --orbital-accent: #a78bff;
+  --orbital-accent-rgb: 115 91 218;
+  min-height: 100dvh;
+  background: url('./orbital-stars.svg') 0 0 repeat,
+    radial-gradient(ellipse 72% 62% at 65% 5%, #24144677, transparent 74%),
+    radial-gradient(ellipse 60% 40% at 9% 35%, #10284869, transparent 82%),
+    #03040a;
+}
+
+.app-shell:has(.orbital-experience)[data-aegis-situation=panic_bio_sync] {
+  --orbital-accent: #ffb385;
+  --orbital-accent-rgb: 226 117 83;
+}
+
+.app-shell:has(.orbital-experience)[data-aegis-situation=o2_leak_zero_ui] {
+  --orbital-accent: #ffd18a;
+  --orbital-accent-rgb: 228 155 74;
+}
+
+.app-shell:has(.orbital-experience)[data-aegis-situation=extreme_isolation] {
+  --orbital-accent: #eab3ab;
+  --orbital-accent-rgb: 191 112 122;
+}
+
+.app-shell:has(.orbital-experience)[data-aegis-situation=mars_murphy] {
+  --orbital-accent: #ff8e86;
+  --orbital-accent-rgb: 219 85 85;
+}
+
+.app-shell:has(.orbital-experience) .sidebar { background: linear-gradient(175deg, #0b1020, #050710 65%); }
+.app-shell:has(.orbital-experience) .topbar { background: #060914ab; }
+.app-shell:has(.orbital-experience)[data-aegis-focus=zero] .workspace { background: transparent; }
+.app-shell:has(.orbital-experience) .orbital-experience {
+  border-color: rgb(var(--orbital-accent-rgb) / .33);
+  background: radial-gradient(ellipse at 76% -40%, rgb(var(--orbital-accent-rgb) / .23), transparent 68%), #070b16df;
+}
+.app-shell:has(.orbital-experience) .orbital-experience-header h2 svg { color: var(--orbital-accent); }
+.app-shell:has(.orbital-experience) .orbital-monitor { background: #080e1bdc; }
+.app-shell:has(.orbital-experience) .companion { background: linear-gradient(170deg, #12152b, #080d1a 72%); }
+.app-shell:has(.orbital-experience) .voice-orb-panel {
+  background: radial-gradient(ellipse at 50% 36%, rgb(var(--orbital-accent-rgb) / .17), transparent 63%);
+}
+.app-shell:has(.orbital-experience) .voice-orb {
+  width: clamp(108px, 18vh, 158px);
+  opacity: 1;
+}
+.app-shell:has(.orbital-experience) .voice-orb circle {
+  transition: opacity .28s ease-out, transform .32s ease-out;
+}
+.app-shell:has(.orbital-experience) .voice-orb-accent-stop { stop-color: var(--orbital-accent); }
+.app-shell:has(.orbital-experience) .voice-orb-halo {
+  fill: var(--orb-halo-paint);
+  opacity: calc(.66 + var(--orb-intensity) * .34);
+}
+.app-shell:has(.orbital-experience) .voice-orb-core {
+  fill: var(--orb-core-paint);
+  filter: drop-shadow(0 0 3px #4279ff80);
+  transform: scale(calc(1 + var(--orb-intensity) * .16));
+}
+.app-shell:has(.orbital-experience) .voice-orb-rim {
+  stroke: var(--orb-ring-paint);
+  stroke-width: 1.15;
+  opacity: .9;
+}
+.app-shell:has(.orbital-experience) :is(.voice-orb-track, .voice-orb-segments) { stroke: var(--orb-ring-paint); }
+.app-shell:has(.orbital-experience) .voice-orb-segments { stroke-width: .95; }
+.app-shell:has(.orbital-experience) .voice-orb-wave {
+  stroke: var(--orb-wave-paint);
+  stroke-width: .9;
+  opacity: calc(.38 + var(--orb-intensity) * .56);
+  transform: scale(calc(.94 + var(--orb-intensity) * .12));
+}
+.app-shell:has(.orbital-experience) .voice-orb[data-voice-state=responding] .voice-orb-rim { animation-duration: 2.8s; }
+.app-shell:has(.orbital-experience) .zero-orb {
+  border-color: var(--orbital-accent);
+  background: radial-gradient(circle at 40% 33%, #bcfaff, #207edc 36%, #292169 58%, #0b1024 73%);
+}
+.app-shell:has(.orbital-experience) .zero-orb.speaking { box-shadow: 0 0 22px rgb(var(--orbital-accent-rgb) / .43); }
+
+.app-shell:has(.orbital-home) .main-content { max-width: none; }
+.app-shell:has(.orbital-home) .orbital-home { padding: 0; border: 0; background: none; }
+.orbit-stage { position: relative; display: grid; justify-items: center; }
+.orbital-home .orbit-stage {
+  --orbit-orb-size: min(68svh, 66vw, 86%);
+  min-height: max(74svh, 430px);
+}
+.orbital-home .orbit-pilot { width: 100%; }
+.orbital-experience .orbit-pilot { position: relative; display: grid; justify-items: center; pointer-events: none; min-width: 0; }
+.orbital-experience .orbit-pilot button { pointer-events: auto; }
+.app-shell .orbital-experience .voice-orb-panel { padding: 0; gap: 4px; border: 0; background: none; width: 100%; }
+.app-shell .orbital-home .voice-orb {
+  width: var(--orbit-orb-size);
+  max-width: 100%;
+  filter: drop-shadow(0 0 32px #434fd52c);
+}
+.orbital-home .orbit-assistant {
+  position: absolute;
+  top: min(34svh, 33vw);
+  transform: translateY(-50%);
+  border-color: #b2eaffaa;
+  background: #080d24e8;
+  color: #ebfcff;
+  min-height: 42px;
+  box-shadow: 0 0 19px #436d9d60;
+}
+.orbit-welcome { margin-block: 7px; color: #dceaff; font: 700 12px/1.5 var(--mono); letter-spacing: .13em; }
+.orbit-belt:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+.orbit-belt:active { cursor: grabbing; }
+.orbit-trail {
+  position: absolute;
+  inset: 8% 4% 9%;
+  border: 1px solid #737fbd52;
+  border-radius: 50%;
+  box-shadow: 0 0 16px #7477d126, inset 0 0 16px #7477d118;
+  pointer-events: none;
+}
+.orbit-node {
+  position: absolute;
+  z-index: 1;
+  left: var(--node-x);
+  top: var(--node-y);
+  transform: translate(-50%, -50%) scale(calc(.86 + .14 * var(--node-depth)));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 96px;
+  padding: 8px 12px;
+  color: #e0eeff;
+  background: linear-gradient(150deg, #17243e, #090e20 76%);
+  border: 1px solid #59687b;
+  border-radius: 19px 12px 20px 13px;
+  box-shadow: 0 8px 20px #02030a80;
+  font-size: 12px;
+  transition: left .36s cubic-bezier(.17,.75,.3,1), top .36s cubic-bezier(.17,.75,.3,1), transform .36s ease-out;
+}
+.orbit-node svg { color: #9dcbfa; }
+.orbit-node small { font-size: 9px; color: #b2c5dc; }
+.orbit-node[aria-current=true] {
+  border-color: #a1daf8;
+  box-shadow: 0 0 16px #52baff38;
+  background: linear-gradient(145deg, #243556, #102038);
+}
+.orbit-guide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 0 auto 5px;
+  text-align: center;
+}
+.orbit-guide small { color: #b7c7dd; }
+.orbital-focus .orbit-stage { padding-block: 12px; }
+.orbital-focus .orbital-experience-header { align-items: start; }
+.orbital-focus .orbit-assistant { margin-top: 9px; }
+
+@media (min-width: 761px) {
+  .orbital-experience.orbital-home .orbit-pilot { position: absolute; inset: 0 0 auto; }
+  .orbital-home .voice-orb-panel > div {
+    position: absolute;
+    top: min(59svh, 57vw);
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: #06091bd9;
+  }
+  .orbital-home .orbit-welcome {
+    position: absolute;
+    top: min(38svh, 36vw);
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: #080d24e8;
+  }
+}
+
+@media (min-width: 1100px) {
+  .main-content:has(.orbital-focus) { grid-template-columns: minmax(0, 1fr) minmax(210px, 25%); align-items: start; }
+  .main-content:has(.orbital-focus) > .scenario-bar { grid-column: 1 / -1; grid-row: 1; }
+  .main-content:has(.orbital-focus) > .mission-widgets { grid-column: 1; grid-row: 2; }
+  .main-content > .orbital-focus { grid-column: 2; grid-row: 2; }
+}
+
+@media (max-width: 760px) {
+  .orbital-home .orbit-stage {
+    --orbit-orb-size: min(48svh, 80vw, 100%);
+    min-height: 0;
+    gap: 14px;
+  }
+  .orbital-home .orbit-assistant { top: min(24svh, 40vw); }
+  .orbit-belt:not([hidden]) {
+    position: relative;
+    grid-row: 2;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .orbit-trail { border-radius: 12px; inset: 0; }
+  .orbit-node { position: relative; inset: auto; transform: none; min-width: 0; padding: 6px 4px; }
+  .orbit-guide { margin: 12px auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-node { transition: none !important; }
+  .app-shell:has(.orbital-experience) .voice-orb circle,
+  .app-shell:has(.orbital-experience) .orbital-monitor .orbital-line i {
+    animation: none !important;
+    transition: none !important;
+    transform: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useState, type CSSProperties } from 'react'
 import type { VoiceState } from './voice'
 import type { InputGraph } from './simulation'
 
@@ -15,6 +15,7 @@ export function VoiceOrb({graph, breathing = false, alert = false, output = 0, s
   graph?: InputGraph; breathing?: boolean; alert?: boolean; output?: number; state?: VoiceState; label?: string
 }) {
   const [activity, setActivity] = useState<number>()
+  const paint = useId()
   useEffect(() => {
     setActivity(undefined)
     if (!graph) return
@@ -44,8 +45,40 @@ export function VoiceOrb({graph, breathing = false, alert = false, output = 0, s
   const available = Boolean(graph) && activity !== undefined
   const amplitude = state === 'playing' ? output : state === 'listening' ? activity ?? 0 : 0
   const intensity = Math.min(1, (amplitude / 100 + (alert ? .3 : 0)) * (breathing ? .55 : 1))
+  const style = {
+    '--orb-intensity': intensity,
+    '--orb-core-paint': `url("#${paint}-core")`,
+    '--orb-halo-paint': `url("#${paint}-halo")`,
+    '--orb-ring-paint': `url("#${paint}-ring")`,
+    '--orb-wave-paint': `url("#${paint}-wave")`,
+  } as CSSProperties
   return <section className="voice-orb-panel" aria-label="Actividad vocal estimada">
-    <svg viewBox="0 0 64 64" className="voice-orb" data-active={state !== 'disconnected'} data-voice-state={state} style={{'--orb-intensity': intensity} as CSSProperties} aria-hidden="true">
+    <svg viewBox="0 0 64 64" className="voice-orb" data-active={state !== 'disconnected'} data-voice-state={state} style={style} aria-hidden="true">
+      <defs>
+        <radialGradient id={`${paint}-core`} cx="36%" cy="29%" r="73%">
+          <stop offset="0" stopColor="#e3ffff"/>
+          <stop offset=".28" stopColor="#52f2ff"/>
+          <stop offset=".56" stopColor="#258dff"/>
+          <stop offset=".8" stopColor="#253cbe"/>
+          <stop offset="1" stopColor="#211657"/>
+        </radialGradient>
+        <radialGradient id={`${paint}-halo`}>
+          <stop offset=".22" stopColor="#2976ec" stopOpacity=".64"/>
+          <stop offset=".67" stopColor="#5c4ee0" stopOpacity=".3"/>
+          <stop offset="1" stopColor="#824fe3" stopOpacity="0"/>
+        </radialGradient>
+        <linearGradient id={`${paint}-ring`} x2="100%" y2="100%">
+          <stop offset="0" stopColor="#4df4ed"/>
+          <stop offset=".39" stopColor="#547eff"/>
+          <stop offset=".72" stopColor="#b18aff"/>
+          <stop offset="1" className="voice-orb-accent-stop"/>
+        </linearGradient>
+        <linearGradient id={`${paint}-wave`} x1="80%" y1="0%" x2="20%" y2="100%">
+          <stop offset="0" className="voice-orb-accent-stop"/>
+          <stop offset=".5" stopColor="#745bff"/>
+          <stop offset="1" stopColor="#43ddf6"/>
+        </linearGradient>
+      </defs>
       <circle className="voice-orb-halo" cx="32" cy="32" r="29"/>
       <circle className="voice-orb-wave" cx="32" cy="32" r="27"/>
       <circle className="voice-orb-track" cx="32" cy="32" r="24"/>

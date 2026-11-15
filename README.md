@@ -8,6 +8,20 @@ Demostración educativa para NASA Space Apps Challenge 2026. Ares Pathfinder es 
 
 [Publicar en GitHub y Render desde PowerShell](#publicar-la-demo-en-github-y-render-desde-powershell).
 
+[Activar la vista orbital o volver a la clásica](#vista-orbital-y-rollback-clásico).
+
+## Vista orbital y rollback clásico
+
+La imagen Docker arranca en la vista orbital. El backend local arranca en la clásica si la variable no está definida. La bandera `AEGIS_ORBITAL_UI_ENABLED` acepta `1` o `true` para activar la vista orbital y `0` para volver a la clásica en ambos entornos.
+
+- **Desarrollo local.** Añade `AEGIS_ORBITAL_UI_ENABLED=1` a `backend/.env` o ejecuta `$env:AEGIS_ORBITAL_UI_ENABLED = '1'` en la terminal de FastAPI. Reinicia FastAPI y recarga la página. Para volver a la clásica, cambia el valor a `0` y repite esos pasos. El entorno de la terminal tiene prioridad sobre `backend/.env`.
+- **Render.** En el servicio, abre **Environment**, agrega `AEGIS_ORBITAL_UI_ENABLED` con valor `1` y elige **Save and deploy**. Para volver a la clásica para todos los visitantes, guarda el valor `0` de la misma forma. [Variables de entorno en Render](https://render.com/docs/configure-environment-variables).
+- **En tu navegador.** Selecciona **Clásica** en **Experiencia visual** para guardar esa preferencia en el navegador. Selecciona **Automática** para volver a seguir la bandera del servidor. Para un rollback inmediato, abre la misma ruta con `?aegis-ui=classic` (o añade `&aegis-ui=classic` si ya hay parámetros). Esta opción tiene prioridad y funciona sin consultar `/api/config`. Quita el parámetro para que se vuelva a aplicar la preferencia guardada.
+
+Si falla la consulta de configuración o la carga de la vista orbital, aparece la vista clásica con un aviso. Ambas experiencias usan la misma consola, micrófono, cola de voz y datos. Cambiar desde el selector conserva la sesión en curso. Abrir el enlace de emergencia recarga la página, por lo que tendrás que volver a iniciar el micrófono si estaba activo. En Render Free, **Save and deploy** reinicia el servicio y puede borrar el estado temporal de la demo. Usa el selector si necesitas volver a la vista clásica durante una sesión sin reiniciar el servicio.
+
+El checkpoint local `checkpoint/pre-orbital-experience` identifica la versión anterior. La bandera y el selector permiten volver a la vista clásica sin restaurar archivos desde el checkpoint.
+
 ## Ejecutar en Windows
 
 Requisitos: Python 3.11 o posterior, Node.js 22 o posterior y npm. Ejecuta cada bloque desde la raíz de este proyecto en una terminal PowerShell independiente.

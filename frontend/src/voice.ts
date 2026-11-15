@@ -123,7 +123,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
     }
   }
 
-  async function start() {
+  async function start(options: {welcome?: () => Promise<void>; allowNoMic?: boolean} = {}) {
     if (sessionRef.current || opening.current || permissionPending.current) return
     opening.current = true
     const version = ++ticket.current
@@ -133,9 +133,10 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
     setTranscripts([])
     let session: Session
     try {
+      const welcome = options.welcome?.()
       if (closing.current) await closing.current
       if (version !== ticket.current) return
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error('El micrófono requiere localhost o HTTPS.')
+      if (!options.allowNoMic && !navigator.mediaDevices?.getUserMedia) throw new Error('El micrófono requiere localhost o HTTPS.')
       const lease = await acquireAudio()
       if (version !== ticket.current) { await lease.release(); return }
       const context = lease.context
@@ -148,25 +149,33 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       if (version !== ticket.current) return
       if (context.state !== 'running') throw new Error('El navegador bloqueó el audio. Pulsa Reconectar para intentarlo de nuevo.')
       permissionPending.current = true
-      let stream: MediaStream
+      let stream: MediaStream | undefined
       try {
-        stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}})
+        stream = await navigator.mediaDevices?.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}})
+      } catch (error) {
+        if (!options.allowNoMic || !(error instanceof DOMException) ||
+            !['NotAllowedError', 'NotFoundError', 'SecurityError', 'NotReadableError'].includes(error.name)) throw error
+        if (version === ticket.current) setError('Micrófono no disponible. Puedes escuchar al asistente o escribir en el chat.')
       } finally { permissionPending.current = false }
-      if (version !== ticket.current) { stream.getTracks().forEach(track => track.stop()); return }
-      session.stream = stream
-      await context.audioWorklet.addModule('/pcm-capture.js')
-      if (version !== ticket.current) return
-      const capture = new AudioWorkletNode(context, 'pcm-capture', {numberOfOutputs: 0})
-      session.capture = capture
-      session.input = context.createMediaStreamSource(stream)
-      setInputGraph({context, input: session.input})
-      capture.port.onmessage = ({data}: MessageEvent<ArrayBuffer>) => {
-        const socket = session.socket
-        if (session.ready && socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 32_768) {
-          const rms = session.meter.read(session.context.currentTime)
-          socket.send(isQuietPlaybackEcho(data, rms) ? new ArrayBuffer(data.byteLength) : data)
+      if (version !== ticket.current) { stream?.getTracks().forEach(track => track.stop()); return }
+      if (stream) {
+        session.stream = stream
+        await context.audioWorklet.addModule('/pcm-capture.js')
+        if (version !== ticket.current) return
+        const capture = new AudioWorkletNode(context, 'pcm-capture', {numberOfOutputs: 0})
+        session.capture = capture
+        session.input = context.createMediaStreamSource(stream)
+        setInputGraph({context, input: session.input})
+        capture.port.onmessage = ({data}: MessageEvent<ArrayBuffer>) => {
+          const socket = session.socket
+          if (session.ready && socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 32_768) {
+            const rms = session.meter.read(session.context.currentTime)
+            socket.send(isQuietPlaybackEcho(data, rms) ? new ArrayBuffer(data.byteLength) : data)
+          }
         }
       }
+      await welcome
+      if (version !== ticket.current) return
     } catch (error) {
       if (version === ticket.current) {
         const denied = error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')

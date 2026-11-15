@@ -44,7 +44,7 @@ class VisitorMiddleware:
         api = path.startswith("/api/")
         page = kind == "http" and scope["method"] in ("GET", "HEAD") and (
             path == "/" or "text/html" in headers.get("accept", ""))
-        if path == "/api/health" or not (api or page) or scope.get("method") == "OPTIONS":
+        if path in {"/api/health", "/api/config"} or not (api or page) or scope.get("method") == "OPTIONS":
             await self.app(scope, receive, send)
             return
         secure = config.EXTERNAL_ORIGIN.startswith("https://") or scope["scheme"] in ("https", "wss")

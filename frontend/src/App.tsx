@@ -2,9 +2,11 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Activity, Box, ChevronDown, CircleHelp, FlaskConical, HeartHandshake, LayoutDashboard, Menu, Moon, ShieldPlus, Sparkles, X } from 'lucide-react'
 import { post, useResource } from './api'
 import { ScenarioBar } from './ScenarioBar'
+import { OrbitalSlot, useOrbitalUi } from './orbitalUi'
 import { OrbitalMonitor } from './OrbitalMonitor'
-import { simulationSchema, type InputGraph, type Simulation, type SituationId } from './simulation'
-import { Companion } from './Companion'
+import { useOrbitalWelcome } from './orbitalWelcome'
+import { simulationSchema, type Simulation, type SituationId } from './simulation'
+import { Companion, type CompanionControls, type CompanionVoiceStatus } from './Companion'
 import { CheckinPrompt, loadPosition, saveLocal, useCheckinPrompt } from './checkinPrompt'
 import { ResourceStatus } from './components'
 import { dateLabel, positionSchema, scenarios, type Change, sectionLabels, sections, type Action, type Metric, type Mission, type Region, type Scenario, type Section, type Span, type View } from './contracts'
@@ -24,6 +26,11 @@ const subtitles: Record<Section, string> = {
 }
 
 export function App() {
+  const orbitalUi = useOrbitalUi()
+  const welcome = useOrbitalWelcome()
+  const [orbitalMounted, setOrbitalMounted] = useState(false)
+  const [orbitalFocused, setOrbitalFocused] = useState(false)
+  const [orbitalSelection, setOrbitalSelection] = useState(0)
   const [section, setSection] = useState<Section>('overview')
   const [context, setContext] = useState(loadPosition)
   const {scenario, day} = context
@@ -37,13 +44,14 @@ export function App() {
   const [companion, setCompanion] = useState(false)
   const [everOpened, setEverOpened] = useState(false)
   const openCompanion = () => { setEverOpened(true); setCompanion(true) }
+  const companionControls = useRef<CompanionControls>(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [simulation, setSimulation] = useState<Simulation>()
   const [activating, setActivating] = useState<SituationId>()
   const [simulationError, setSimulationError] = useState('')
   const [breathingEvent, setBreathingEvent] = useState<string>()
   const [fullWorkspace, setFullWorkspace] = useState(false)
-  const [voiceStatus, setVoiceStatus] = useState<{label: string; playing: boolean; graph?: InputGraph}>({label: 'Voz desconectada', playing: false})
+  const [voiceStatus, setVoiceStatus] = useState<CompanionVoiceStatus>({label: 'Voz desconectada', playing: false, state: 'disconnected', output: 0})
   const simulationLoad = useResource<unknown>('simulation')
   const mutation = useRef(false)
   const lastEvent = useRef('')
@@ -75,6 +83,7 @@ export function App() {
   useEffect(() => { saveLocal('aegis-mission-v1', context) }, [context])
   const health = useResource<{status: string; geminiStatus: 'configured' | 'unconfigured'}>('health')
   const navigate = useCallback((next: Section) => {
+    setOrbitalFocused(true)
     setSection(next)
     setMobileNav(false)
     window.scrollTo(0, 0)
@@ -108,13 +117,31 @@ export function App() {
   }
   function openNight(day: number) { setNight(day); navigate('sleep') }
   function openMetric(value: Metric) { setMetric(value); navigate('vitals') }
+  function returnToOrbit() {
+    setOrbitalFocused(false)
+    setMobileNav(false)
+    window.scrollTo(0, 0)
+  }
+  function startAssistant(retry = false) {
+    openCompanion()
+    companionControls.current?.startFromOrbit(() => welcome.play(retry))
+  }
+  function openOrbitalModule(module: Section | 'companion') {
+    if (module === 'companion') {
+      setOrbitalFocused(true)
+      openCompanion()
+    } else navigate(module)
+  }
 
   const zero = simulation?.active_mode === 'zero_ui' && !fullWorkspace
-  return <div className="app-shell" data-companion-open={companion} data-aegis-mode={simulation?.active_mode ?? 'standard'} data-aegis-focus={zero ? 'zero' : undefined}>
+  const orbital = orbitalUi.orbital && orbitalMounted
+  const breathing = Boolean(simulation?.event_id && breathingEvent === simulation.event_id)
+  return <div className="app-shell" data-companion-open={companion} data-aegis-mode={simulation?.active_mode ?? 'standard'}
+    data-aegis-situation={simulation?.scenario_id ?? 'nominal'} data-aegis-focus={zero ? 'zero' : undefined}>
     <a className="skip-link" href="#mission-content">Skip to mission content</a>
     {mobileNav && <button className="nav-backdrop" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>}
     <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
-      <button className="brand" onClick={() => navigate('overview')} aria-label="AEGIS BioSystems home">
+      <button className="brand" onClick={() => orbital ? returnToOrbit() : navigate('overview')} aria-label="AEGIS BioSystems home">
         <span className="brand-mark"><ShieldPlus size={24}/></span><span><strong>AEGIS</strong><small>BIOSYSTEMS</small></span>
       </button>
       <button className="icon-button mobile-close" aria-label="Close menu" onClick={() => setMobileNav(false)}><X size={17}/></button>
@@ -137,6 +164,12 @@ export function App() {
         <button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu size={20}/></button>
         <span className="topbar-title">AEGIS <span>BioSystems</span></span>
         <div className="topbar-right">
+          <select className="experience-select" aria-label="Experiencia visual" disabled={orbitalUi.urlClassic}
+            value={orbitalUi.preferredClassic ? 'classic' : 'auto'}
+            onChange={event => orbitalUi.setPreference(event.target.value === 'classic')}>
+            <option value="auto">Automática</option>
+            <option value="classic">Clásica</option>
+          </select>
           <span className={`system-state ${health.error ? 'irregular' : ''}`}><i/>{health.data ? 'System online' : health.error ? 'API offline' : 'Connecting'}</span>
           {current && <span className="day-chip">MD <strong>{String(current.day).padStart(2, '0')}</strong></span>}
           {current && <div className="crew"><span className="crew-avatar">MC</span><div><strong>{current.name}</strong><small>{current.role}</small></div></div>}
@@ -144,13 +177,20 @@ export function App() {
             <Sparkles size={16}/> <span>Companion</span>
           </button>
         </div>
-        <OrbitalMonitor orbital={simulation?.orbital} day={simulation?.mission_day ?? current?.day} plannedDays={current?.plannedDays}/>
+        <div className="classic-orbital-monitor" hidden={orbital}>
+          <OrbitalMonitor orbital={simulation?.orbital} day={simulation?.mission_day ?? current?.day} plannedDays={current?.plannedDays}/>
+        </div>
       </header>
       <main id="mission-content" className="main-content">
+        <OrbitalSlot enabled={orbitalUi.orbital} failed={orbitalUi.failed}
+          orbital={simulation?.orbital} day={simulation?.mission_day ?? current?.day} plannedDays={current?.plannedDays}
+          focused={orbitalFocused} selection={orbitalSelection} select={setOrbitalSelection} onMounted={setOrbitalMounted}
+          open={openOrbitalModule} back={returnToOrbit} startAssistant={() => startAssistant()} retryWelcome={() => startAssistant(true)}
+          welcome={welcome.status} voice={voiceStatus} breathing={breathing} alert={Boolean(simulation && simulation.scenario_id !== 'nominal')}/>
         <ScenarioBar snapshot={simulation} busy={activating} error={simulationError || (simulationLoad.error ? 'No se pudo cargar el estado de simulación.' : '')}
           activate={id => void activateSituation(id)} heartRate={current?.metrics.heartRate.value} playing={voiceStatus.playing}
           voiceStatus={voiceStatus.label} graph={voiceStatus.graph} onBreathing={setBreathingEvent} openVoice={openCompanion} useWorkspace={() => setFullWorkspace(current => !current)}/>
-        <div className="mission-widgets" hidden={zero}>
+        <div className="mission-widgets" hidden={zero || (orbital && !orbitalFocused)}>
         <header className="page-heading">
           <div><div className="eyebrow"><span className="section-path">Mission Health Console</span>{current && <span> / {dateLabel(current.date)}</span>}</div>
             <h1>{sectionLabels[section]}</h1><p>{subtitles[section]}</p></div>
@@ -173,7 +213,8 @@ export function App() {
         </div>
       </main>
     </div>
-    {everOpened && <Companion visible={companion} breathing={Boolean(simulation?.event_id && breathingEvent === simulation.event_id)} simulation={simulation} onSimulation={syncSimulation} onVoiceStatus={setVoiceStatus} context={context} ui={{section, metric, range: span, region, view}} availability={health.error ? 'error' : health.data?.geminiStatus ?? 'checking'}
+    {(everOpened || orbitalUi.orbital) && <Companion ref={companionControls} orbital={orbital} waitForWelcome={welcome.wait}
+      visible={companion} breathing={breathing} simulation={simulation} onSimulation={syncSimulation} onVoiceStatus={setVoiceStatus} context={context} ui={{section, metric, range: span, region, view}} availability={health.error ? 'error' : health.data?.geminiStatus ?? 'checking'}
       onActions={onActions} onChange={applyChange} close={closeCompanion} checkin={checkin}/>}
   </div>
 }

@@ -10,9 +10,11 @@
 !frontend/src/*.ts
 !frontend/src/*.tsx
 !frontend/src/*.css
+!frontend/src/orbital-stars.svg
 frontend/src/*.test.*
 !frontend/public/
 !frontend/public/pcm-capture.js
+!frontend/public/aegis-welcome.wav
 !frontend/public/mars.png
 !backend/
 !backend/requirements-runtime.txt

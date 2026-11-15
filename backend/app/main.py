@@ -5,7 +5,7 @@ from time import monotonic
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, WebSocket
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,11 @@ app = FastAPI(title="AEGIS BioSystems", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=config.ORIGINS, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 app.add_middleware(VisitorMiddleware)
 DEFAULT = Scenario.SHORT_SLEEP
+
+
+@app.get("/api/config")
+def public_config():
+    return JSONResponse({"orbitalUiEnabled": config.ORBITAL_UI_ENABLED}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/health")

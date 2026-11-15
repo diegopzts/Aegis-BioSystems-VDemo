@@ -95,7 +95,7 @@ it('measures scheduled PCM only during playback and gates quiet residual audio o
   expect(isQuietPlaybackEcho(speech, .25)).toBe(false)
 })
 
-async function openPlayback() {
+async function openPlayback(withoutMic = false) {
   vi.useFakeTimers()
   const played: ReturnType<typeof vi.fn>[] = []
   const stops: ReturnType<typeof vi.fn>[] = []
@@ -140,14 +140,15 @@ async function openPlayback() {
     port = {close: vi.fn(), onmessage: null}
     disconnect = vi.fn()
   }
-  const getUserMedia = vi.fn().mockResolvedValue({getTracks: () => [{stop: vi.fn()}]})
+  const getUserMedia = withoutMic ? vi.fn().mockRejectedValue(new DOMException('Permiso denegado', 'NotAllowedError')) :
+    vi.fn().mockResolvedValue({getTracks: () => [{stop: vi.fn()}]})
   vi.stubGlobal('navigator', {mediaDevices: {getUserMedia}})
   vi.stubGlobal('AudioContext', Context)
   vi.stubGlobal('AudioWorkletNode', Worklet)
   vi.stubGlobal('WebSocket', Socket)
   const onActions = vi.fn()
   const {result, rerender, unmount} = renderHook(({day}) => useVoice('nominal', onActions, day), {initialProps: {day: 30}})
-  await act(async () => {await result.current.start()})
+  await act(async () => {await result.current.start({allowNoMic: withoutMic})})
   const socket = sockets[0]
   const id = socket.url.searchParams.get('session_id')
   const event = (type: string, extra = {}) => socket.onmessage?.({data: JSON.stringify({type, ...extra})})
@@ -155,6 +156,21 @@ async function openPlayback() {
   return {result, rerender, unmount, played, stops, sources, connections, destination, sockets, getUserMedia,
     event, pcm, id, setClock: (value: number) => { clock = value }}
 }
+
+it('can connect and play Gemini output without a microphone when launched from orbit', async () => {
+  const {result, event, pcm, id, played, getUserMedia, unmount} = await openPlayback(true)
+  expect(getUserMedia).toHaveBeenCalledOnce()
+  expect(result.current.inputGraph).toBeUndefined()
+  act(() => {
+    event('state', {value: 'listening'})
+    event('audio_format', {rate: 24000, channels: 1})
+    event('audio_chunk', {session_id: id, turn: 1, sequence: 1})
+    pcm()
+  })
+  expect(played).toHaveLength(1)
+  expect(result.current.error).toMatch(/Micrófono no disponible/)
+  unmount()
+})
 
 it('plays ordinary voice on the destination and distinguishes text-only and incompatible PCM', async () => {
   const {result, played, connections, destination, event, pcm, id, unmount, setClock} = await openPlayback()
