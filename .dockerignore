@@ -16,6 +16,8 @@ frontend/src/*.test.*
 !frontend/public/pcm-capture.js
 !frontend/public/aegis-welcome.wav
 !frontend/public/mars.png
+!frontend/public/biosystems/
+!frontend/public/biosystems/cuerpo.glb
 !backend/
 !backend/requirements-runtime.txt
 !backend/app/

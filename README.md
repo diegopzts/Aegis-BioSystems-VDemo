@@ -47,6 +47,14 @@ npm.cmd run dev
 
 Abre [AEGIS BioSystems](http://127.0.0.1:5173/). La [documentación interactiva de FastAPI](http://127.0.0.1:8005/docs) describe los endpoints. Si el puerto 5173 está ocupado, usa `npm.cmd run dev -- --port 5187` y abre [la vista alternativa](http://127.0.0.1:5187/). Si usas Gemini Live en ese puerto, añade `http://127.0.0.1:5187` a `CORS_ORIGINS` en `backend/.env` y reinicia FastAPI.
 
+### BioSystems 3D
+
+Abre **BioSystems 3D** en la vista orbital o clásica. El visor de AstroSalud se integró como un componente nativo de AEGIS con la versión de Three.js que ya usa el proyecto. Conserva el GLB original, la cámara, las luces, la cuadrícula, el resaltado de regiones, la rotación, el zoom y el enfoque. La capa de soporte conserva el filtro por nombres del original, pero no equivale a un esqueleto completo. El archivo no incluye órganos internos, mapas de textura ni animaciones embebidas; las transiciones y la rotación son del visor.
+
+El archivo `frontend/public/biosystems/cuerpo.glb` tiene 26,48 MB y se descarga una vez abierto el módulo. Vite lo copia sin transformar a `dist/biosystems/cuerpo.glb` y Docker lo incluye para servirlo por HTTPS desde el mismo origen que la aplicación. Se necesita WebGL 2; si la rotación continua resulta lenta, puedes pausarla sin reducir la calidad del modelo. La preferencia de movimiento reducido desactiva la rotación automática y el desplazamiento animado de la cámara. **Cargar modelo** admite GLB o glTF autocontenido de tu equipo sin subirlo a un servidor.
+
+La práctica de estrés y sus gráficas se mantienen separadas de la telemetría simulada de AEGIS. Gemini conserva el contrato existente: cuerpo completo, cabeza, pecho o extremidades, desde el frente, izquierda, derecha o atrás. Para volver a la vista inicial usa **Reset view** o pide a Gemini que restablezca el modelo. El checkpoint `checkpoint/pre-biosystems-3d-migration` conserva la versión inmediatamente anterior.
+
 ## Configurar Gemini
 
 1. Crea una clave para Gemini API en [Google AI Studio](https://aistudio.google.com/app/apikey).

@@ -104,7 +104,14 @@ TOOLS = {
     "get_simulator_state": Tool("Escenarios, posición, límites de días y estado de la interfaz actual.", StrictModel),
     "get_activity": Tool("Últimos 30 cambios persistidos y cuáles se pueden deshacer.", StrictModel),
     "undo_change": Tool("Deshace un cambio reversible por identificador de actividad.", EntryArgs, "write"),
-    "control_ui": Tool("Navega a un módulo, cambia gráfica o ajusta el visor por solicitud explícita.", UiArgs, "ui"),
+    "control_ui": Tool(
+        "Navega a un módulo, cambia gráfica o ajusta el visor por solicitud explícita. "
+        "BioSystems 3D admite cuerpo completo, cabeza, pecho y extremidades, con vistas frontal, izquierda, "
+        "derecha y posterior. Para restablecer usa full/front. El modelo es musculoesquelético: no muestra "
+        "órganos internos ni el sistema cardiovascular. No ofrezcas capas ni selecciones de órganos, ni "
+        "atribuyas mediciones clínicas a la anatomía del visor.",
+        UiArgs, "ui",
+    ),
 }
 
 def declarations():

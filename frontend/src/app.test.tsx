@@ -8,8 +8,18 @@ import { useVoice } from './voice'
 import { checkinDue } from './checkinPrompt'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-vi.mock('@react-three/fiber', () => ({Canvas: () => <span>WebGL canvas</span>}))
-vi.mock('@react-three/drei', () => ({Grid: () => null, OrbitControls: () => null}))
+const anatomy = vi.hoisted(() => ({
+  focus: vi.fn(), highlight: vi.fn(), zoom: vi.fn(), rotate: vi.fn(), dispose: vi.fn(), load: vi.fn(), setLayer: vi.fn(),
+  select: null as null | ((zone: import('./anatomyPractice').Zone) => void),
+}))
+vi.mock('./anatomyScene', () => ({
+  mountAnatomy: (_canvas: HTMLCanvasElement, report: (state: import('./anatomyScene').ModelState) => void,
+    select: (zone: import('./anatomyPractice').Zone) => void) => {
+    anatomy.select = select
+    report({status: 'ready', layers: ['muscle', 'support']})
+    return anatomy
+  },
+}))
 vi.mock('recharts', async importOriginal => {
   const original = await importOriginal<typeof import('recharts')>()
   return {...original, ResponsiveContainer: () => null}
@@ -33,7 +43,7 @@ const mission: Mission = {
   metrics: {heartRate: metricValue(70, 'bpm'), temperature: metricValue(36.6, '°C'), spo2: metricValue(98, '%'), sleepHours: metricValue(6.2, 'h')},
 }
 
-beforeEach(() => { localStorage.clear(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
+beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 function mockApi(geminiStatus: 'configured' | 'unconfigured' = 'configured', chatReply?: unknown) {
@@ -90,11 +100,21 @@ describe('mission console', () => {
     fireEvent.click(screen.getByRole('button', {name: 'AEGIS AI Companion'}))
     fireEvent.change(screen.getByRole('textbox', {name: 'Mensaje para AEGIS'}), {target: {value: 'Open chest'}})
     fireEvent.click(screen.getByRole('button', {name: 'Enviar mensaje'}))
-    expect(await screen.findByText('WebGL canvas')).toBeTruthy()
+    const canvas = await screen.findByLabelText('Modelo anatómico 3D')
+    await waitFor(() => expect(canvas).toHaveProperty('dataset.modelStatus', 'ready'))
     expect(screen.getByRole('button', {name: 'Chest'}).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', {name: 'right'}).getAttribute('aria-pressed')).toBe('true')
+    expect(anatomy.focus).toHaveBeenLastCalledWith([0, 2.7, 0, 3.2], 'right')
     fireEvent.click(screen.getByRole('button', {name: 'Reset view'}))
     expect(screen.getByRole('button', {name: 'Full body'}).getAttribute('aria-pressed')).toBe('true')
+    expect(anatomy.focus).toHaveBeenLastCalledWith([0, 2, 0, 9], 'front')
+    expect(screen.queryByRole('button', {name: 'Órganos'})).toBeNull()
+    fireEvent.click(screen.getByRole('button', {name: 'Estructuras de soporte'}))
+    expect(anatomy.setLayer).toHaveBeenCalledWith('support')
+    act(() => anatomy.select?.('brazos'))
+    expect(screen.getByRole('button', {name: 'Limbs'}).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', {name: /^Brazos$/}).getAttribute('aria-pressed')).toBe('true')
+    expect(anatomy.focus).toHaveBeenLastCalledWith([.85, 2.1, 0, 3.6])
   })
 
   it('refreshes the mission from the committed change returned by chat', async () => {

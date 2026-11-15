@@ -22,7 +22,7 @@ const subtitles: Record<Section, string> = {
   vitals: 'Review simulated physiology against the crew member’s individual baseline.',
   sleep: 'Explore 30 mission nights, sleep timing and recovery patterns.',
   wellness: 'Track how you feel and make room for recovery.',
-  body: 'Explore a stylized crew model and its linked health measurements.',
+  body: 'Explore the anatomical model and view simulated mission telemetry separately.',
 }
 
 export function App() {

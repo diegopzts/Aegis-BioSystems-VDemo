@@ -1,96 +1,204 @@
-import { Component, useEffect, useRef, type ReactNode } from 'react'
-import { Box, RotateCcw, UserRound } from 'lucide-react'
-import { Canvas } from '@react-three/fiber'
-import { Grid, OrbitControls } from '@react-three/drei'
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { SectionTitle } from './components'
-import { metricLabels, regionLabels, regions, views, type Metric, type Mission, type Region, type View } from './contracts'
+import {useCallback, useEffect, useMemo, useRef, useState, type CSSProperties} from 'react'
+import {Box, Maximize, Minus, Plus, RotateCcw, UserRound} from 'lucide-react'
+import {SectionTitle} from './components'
+import {COL, CSS, LBL, habitats, practiceData, zoneLabels, zones, type Habitat, type Zone} from './anatomyPractice'
+import {mountAnatomy, type Layer, type ModelState} from './anatomyScene'
+import {metricLabels, regionLabels, regions, views, type Metric, type Mission, type Region, type View} from './contracts'
 
-export const cameraPositions: Record<View, [number, number, number]> = {
-  front: [0, 0.2, 5.6], left: [-5.6, 0.2, 0], right: [5.6, 0.2, 0], back: [0, 0.2, -5.6],
-}
-export const regionMetrics: Record<Region, Metric[]> = {
+const regionMetrics: Record<Region, Metric[]> = {
   full: ['temperature', 'heartRate', 'spo2', 'sleepHours'], head: ['sleepHours'], chest: ['heartRate', 'spo2'], limbs: ['temperature'],
 }
+const regionFor: Record<Zone, Region> = {cabeza: 'head', pecho: 'chest', abdomen: 'full', brazos: 'limbs', piernas: 'limbs'}
+const zonesFor: Record<Region, Zone[]> = {full: [], head: ['cabeza'], chest: ['pecho'], limbs: ['brazos', 'piernas']}
+const pointsFor: Record<Region, number[]> = {full: [0, 2, 0, 9], head: [0, 3.6, 0, 2.4], chest: [0, 2.7, 0, 3.2], limbs: [0, 1.45, 0, 6]}
+const labels: Record<Layer, string> = {muscle: 'Músculos', support: 'Estructuras de soporte', organs: 'Órganos'}
+const rank = {verde: 0, amarillo: 1, rojo: 2}
 
-function Camera({view, revision}: {view: View; revision: number}) {
-  const controls = useRef<OrbitControlsImpl>(null)
-  useEffect(() => {
-    if (!controls.current) return
-    controls.current.object.position.set(...cameraPositions[view])
-    controls.current.target.set(0, 0, 0)
-    controls.current.update()
-  }, [view, revision])
-  return <OrbitControls ref={controls} enablePan={false} minDistance={3.4} maxDistance={9}/>
-}
-
-function BodyModel({region, select}: {region: Region; select: (region: Region) => void}) {
-  function material(part: Region, visor = false) {
-    const selected = part === region
-    return <meshStandardMaterial color={selected ? '#5bd5f9' : visor ? '#295a82' : '#5c83ab'}
-      metalness={visor ? 0.75 : 0.5} roughness={visor ? 0.22 : 0.42}
-      emissive={selected ? '#177893' : '#102236'} emissiveIntensity={selected ? 0.52 : 0.2}/>
-  }
-  function choose(part: Region) {
-    return (event: {stopPropagation: () => void}) => { event.stopPropagation(); select(part) }
-  }
-  return <group>
-    <group position={[0, 1.13, 0]} onClick={choose('head')}>
-      <mesh scale={[0.29, 0.34, 0.27]}><sphereGeometry args={[1, 32, 24]}/>{material('head')}</mesh>
-      <mesh position={[0, 0.015, 0.143]} scale={[0.249, 0.18, 0.15]}><sphereGeometry args={[1, 32, 24]}/>{material('head', true)}</mesh>
-    </group>
-    <group onClick={choose('chest')}>
-      <mesh position={[0, 0.45, 0]} scale={[0.48, 0.49, 0.235]}><sphereGeometry args={[1, 32, 24]}/>{material('chest')}</mesh>
-      <mesh position={[0, 0.01, 0]} scale={[0.33, 0.26, 0.2]}><sphereGeometry args={[1, 24, 20]}/>{material('chest')}</mesh>
-      <mesh position={[0, 0.42, 0.21]} rotation={[0, 0, Math.PI / 4]}><boxGeometry args={[0.13, 0.13, 0.055]}/>{material('chest', true)}</mesh>
-    </group>
-    <group onClick={choose('limbs')}>
-      {[-1, 1].map(side => <group key={side}>
-        <mesh position={[side * 0.49, 0.51, 0]}><sphereGeometry args={[0.17, 22, 16]}/>{material('limbs')}</mesh>
-        <mesh position={[side * 0.63, 0.16, 0]} rotation={[0, 0, side * 0.36]}><capsuleGeometry args={[0.105, 0.57, 7, 18]}/>{material('limbs')}</mesh>
-        <mesh position={[side * 0.77, -0.25, 0.02]} scale={[0.11, 0.14, 0.09]}><sphereGeometry args={[1, 20, 16]}/>{material('limbs')}</mesh>
-        <mesh position={[side * 0.185, -0.59, 0]} rotation={[0, 0, side * 0.065]}><capsuleGeometry args={[0.155, 0.67, 8, 20]}/>{material('limbs')}</mesh>
-        <mesh position={[side * 0.225, -1.09, 0]}><capsuleGeometry args={[0.123, 0.34, 8, 20]}/>{material('limbs')}</mesh>
-        <mesh position={[side * 0.225, -1.37, 0.06]} scale={[0.135, 0.11, 0.21]}><sphereGeometry args={[1, 20, 16]}/>{material('limbs')}</mesh>
-      </group>)}
-    </group>
-  </group>
-}
-
-class ViewerBoundary extends Component<{children: ReactNode}, {failed: boolean}> {
-  state = {failed: false}
-  static getDerivedStateFromError() { return {failed: true} }
-  render() {
-    return this.state.failed ? <p className="viewer-fallback">WebGL is unavailable. Region metrics remain accessible.</p> : this.props.children
-  }
+function Trend({history, value, color}: {history: number[]; value: number; color: string}) {
+  const entries = [...history, value]
+  const low = Math.min(...entries), span = Math.max(...entries) - low || 1
+  const points = entries.map((entry, index) => [6 + 188 * index / (entries.length - 1), 48 - 40 * (entry - low) / span])
+  const [lastX, lastY] = points[points.length - 1]
+  return <svg viewBox="0 0 200 54" role="img" aria-label={`Últimos siete valores ficticios: ${entries.join(', ')}`} preserveAspectRatio="none">
+    <polyline points={points.map(point => point.join(',')).join(' ')} stroke={color} strokeWidth={2} fill="none" vectorEffect="non-scaling-stroke"/>
+    <circle cx={lastX} cy={lastY} r={3} fill={color}/>
+  </svg>
 }
 
 export function BodyPage({mission, region, view, revision, setRegion, setView}: {
   mission: Mission; region: Region; view: View; revision: number; setRegion: (region: Region) => void; setView: (view: View) => void
 }) {
-  return <div className="split-grid body-grid">
-    <section className="panel content-panel">
-      <SectionTitle icon={<Box size={19}/>} title="Crew Model" subtitle="Drag to rotate · Scroll to zoom"
-        action={<button className="button" onClick={() => {setRegion('full'); setView('front')}}><RotateCcw size={15}/> Reset view</button>}/>
-      <div className="body-canvas"><ViewerBoundary><Canvas camera={{position: cameraPositions.front, fov: 39}}
-        fallback={<p className="viewer-fallback">WebGL is required for the interactive model.</p>}>
-        <ambientLight intensity={1.0}/><directionalLight position={[3, 5, 4]} intensity={2.35} color="#c6ecff"/>
-        <directionalLight position={[-3, 0, -4]} intensity={2.5} color="#1687d9"/>
-        <Grid position={[0, -1.49, 0]} args={[8, 8]} cellSize={0.36} cellColor="#214565" sectionColor="#3c6890" fadeDistance={7}/>
-        <BodyModel region={region} select={setRegion}/><Camera view={view} revision={revision}/>
-      </Canvas></ViewerBoundary></div>
-      <div className="control-strip viewer-controls" aria-label="Camera orientation">{views.map(value =>
+  const scene = useRef<ReturnType<typeof mountAnatomy> | null>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const stage = useRef<HTMLDivElement>(null)
+  const regionInfo = useRef<HTMLDivElement>(null)
+  const [model, setModel] = useState<ModelState>({status: 'loading', layers: []})
+  const [layer, setLayer] = useState<Layer>('muscle')
+  const [stress, setStress] = useState(35)
+  const [habitat, setHabitat] = useState<Habitat>('nave')
+  const [open, setOpen] = useState<Zone[]>(zonesFor[region])
+  const [rotating, setRotating] = useState(() => !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+  const [fullscreenError, setFullscreenError] = useState(false)
+  const data = useMemo(() => practiceData(stress, habitat), [stress, habitat])
+  const worst = zones.reduce((a, zone) => rank[data[zone].tone] > rank[a] ? data[zone].tone : a, 'verde' as keyof typeof rank)
+  const pick = useRef<(zone: Zone) => void>(() => {})
+  const lastPose = useRef<{revision: number; view: View} | null>(null)
+  const report = useCallback((state: ModelState) => {
+    setModel(state)
+    if (state.status === 'ready' && !state.detail) setLayer(state.layers.includes('muscle') ? 'muscle' : state.layers[0])
+  }, [])
+
+  useEffect(() => {
+    if (!canvas.current) return
+    lastPose.current = null
+    try {
+      scene.current = mountAnatomy(canvas.current, report, zone => pick.current(zone))
+    } catch {
+      setModel({status: 'error', layers: [], detail: 'WebGL 2 no está disponible. El panel de regiones sigue disponible.'})
+    }
+    return () => { scene.current?.dispose(); scene.current = null }
+  }, [report])
+  // The validated AEGIS viewer action changes region and camera revision together.
+  useEffect(() => {
+    if (lastPose.current?.revision === revision && lastPose.current.view === view) return
+    if (lastPose.current || revision || region !== 'full' || view !== 'front') {
+      setOpen(zonesFor[region])
+      scene.current?.focus(pointsFor[region], view)
+      setRotating(false)
+    }
+    lastPose.current = {revision, view}
+    // A canvas pick changes the shared coarse region without requesting a new camera pose.
+  }, [revision, view]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    scene.current?.highlight(open.reduce((mask, zone) => mask | (1 << zones.indexOf(zone)), 0),
+      zones.map(zone => COL[data[zone].tone]))
+  }, [data, open])
+  useEffect(() => {
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    function respectMotion() { if (motion?.matches) setRotating(false) }
+    motion?.addEventListener('change', respectMotion)
+    return () => motion?.removeEventListener('change', respectMotion)
+  }, [])
+
+  function focus(target: Zone) {
+    setOpen(previous => [target, ...previous.filter(zone => zone !== target)])
+    setRegion(regionFor[target])
+    scene.current?.focus(data[target].f)
+    setRotating(false)
+    if (regionInfo.current) regionInfo.current.scrollTop = 0
+  }
+  useEffect(() => { pick.current = focus })
+  function chooseRegion(next: Region) {
+    setRegion(next)
+    setOpen(zonesFor[next])
+    scene.current?.focus(pointsFor[next])
+    setRotating(false)
+  }
+  function closeZone(zone: Zone) {
+    const remaining = open.filter(value => value !== zone)
+    setOpen(remaining)
+    setRegion(remaining.length ? regionFor[remaining[0]] : 'full')
+    if (!remaining.length) scene.current?.focus(pointsFor.full)
+  }
+  function reset() {
+    setRegion('full')
+    setView('front')
+  }
+  async function fullscreen() {
+    try {
+      if (document.fullscreenElement === stage.current) await document.exitFullscreen()
+      else if (stage.current?.requestFullscreen) await stage.current.requestFullscreen()
+      else throw Error('Fullscreen unavailable')
+      setFullscreenError(false)
+    } catch { setFullscreenError(true) }
+  }
+
+  return <div className="anatomy-layout">
+    <section className="panel content-panel anatomy-viewer">
+      <SectionTitle icon={<Box size={19}/>} title="Crew Model" subtitle="Modelo anatómico educativo · Arrastra para orbitar y usa la rueda para acercarte"
+        action={<button className="button" onClick={reset}><RotateCcw size={15}/> Reset view</button>}/>
+      <div className="control-strip anatomy-toolbar" aria-label="Herramientas del visor">
+        <button className="button" aria-pressed={rotating} disabled={!scene.current} onClick={() => {
+          scene.current?.rotate(!rotating); setRotating(!rotating)
+        }}>Rotación automática</button>
+        <button className="button" aria-label="Acercar" disabled={!scene.current} onClick={() => scene.current?.zoom(.8)}><Plus size={16}/></button>
+        <button className="button" aria-label="Alejar" disabled={!scene.current} onClick={() => scene.current?.zoom(1.25)}><Minus size={16}/></button>
+        <label className="button anatomy-file">Cargar modelo
+          <input type="file" accept=".glb,.gltf" disabled={!scene.current} onChange={event => {
+            const file = event.currentTarget.files?.[0]
+            if (file) void scene.current?.load(file)
+            event.currentTarget.value = ''
+          }}/>
+        </label>
+        <button className="button" aria-label="Pantalla completa" onClick={() => void fullscreen()}><Maximize size={16}/></button>
+      </div>
+      {fullscreenError && <p className="muted" role="status">Pantalla completa no disponible en este navegador.</p>}
+      <div ref={stage} className="anatomy-stage">
+        <canvas ref={canvas} aria-label="Modelo anatómico 3D" data-model-status={model.status}/>
+        {model.status !== 'ready' && <div className="anatomy-status" role="status">
+          {model.status === 'loading' ? 'Cargando el modelo anatómico…' : model.detail}
+          {model.status === 'error' && scene.current && <button className="button" onClick={() => void scene.current?.load()}>Reintentar</button>}
+        </div>}
+        <button className="button anatomy-exit" onClick={() => void fullscreen()}>Salir de pantalla completa</button>
+      </div>
+      {model.status === 'ready' && model.detail && <p role="status" className="muted">{model.detail}</p>}
+      {model.layers.length > 1 && <div className="control-strip anatomy-toolbar" aria-label="Capas del modelo">
+        {(Object.keys(labels) as Layer[]).filter(item => model.layers.includes(item)).map(item =>
+          <button key={item} className="button" aria-pressed={layer === item} onClick={() => {
+            scene.current?.setLayer(item); setLayer(item)
+          }}>{labels[item]}</button>)}
+      </div>}
+      {layer === 'support' && <p className="muted">Filtro por nombres de las mallas del archivo. No representa un esqueleto completo.</p>}
+      <div className="control-strip anatomy-toolbar" aria-label="Camera orientation">{views.map(value =>
         <button key={value} className="button capitalize" aria-pressed={view === value} onClick={() => setView(value)}>{value}</button>)}</div>
     </section>
-    <section className="panel content-panel">
-      <SectionTitle icon={<UserRound size={19}/>} title="Body Regions" subtitle="Explore related mission measurements"/>
-      <div className="region-tabs">{regions.map(key => <button key={key} className="button" aria-pressed={key === region} onClick={() => setRegion(key)}>{regionLabels[key]}</button>)}</div>
-      <h3>{regionLabels[region]}</h3>
-      <dl className="detail-list">{regionMetrics[region].map(metric => <div key={metric}><dt>{metricLabels[metric]}</dt>
-        <dd>{mission.metrics[metric].value} {mission.metrics[metric].unit}</dd></div>)}
-        {region === 'head' && <div><dt>Mood</dt><dd>{mission.wellness.mood}/5</dd></div>}
-      </dl>
-      <p className="muted">Measurements shown are simulated and associated with regions for exploration.</p>
-    </section>
+    <aside className="panel content-panel anatomy-info">
+      <SectionTitle icon={<UserRound size={19}/>} title="Body Regions" subtitle="Zonas del modelo y datos de práctica"/>
+      <div className="region-tabs" aria-label="Body regions">{regions.map(key => <button key={key} className="button" aria-pressed={key === region} onClick={() => chooseRegion(key)}>{regionLabels[key]}</button>)}</div>
+      <div className="region-tabs" aria-label="Zonas anatómicas">{zones.map(zone =>
+        <button key={zone} className="button anatomy-zone" aria-pressed={open.includes(zone)} onClick={() => focus(zone)}>
+          <span aria-hidden="true" style={{background: CSS[data[zone].tone]}}/>{zoneLabels[zone]}
+        </button>)}</div>
+      <div className="anatomy-practice">
+        <p className="muted">Práctica educativa · Valores ficticios, independientes de AEGIS.</p>
+        <label>Escenario de práctica
+          <select value={habitat} onChange={event => setHabitat(event.target.value as Habitat)}>
+            {(Object.keys(habitats) as Habitat[]).map(key => <option key={key} value={key}>{habitats[key]}</option>)}
+          </select>
+        </label>
+        <label>Simular estrés <output>{stress} %</output>
+          <input type="range" min="0" max="100" value={stress} onChange={event => setStress(event.target.valueAsNumber)}/>
+        </label>
+        <p className="muted">Estado de práctica: <b style={{color: CSS[worst]}}>{LBL[worst]}</b> · Pulso {data.pecho.value} lpm · SpO₂ 97 % · HRV {data.cabeza.value} ms</p>
+      </div>
+      <div ref={regionInfo} className="anatomy-details">
+        {!open.length ? <p className="muted">Selecciona una zona en el modelo o en los botones. Los colores indican normal, cuidado o alerta dentro de la práctica.</p> :
+          <div className="anatomy-card-list">
+            {open.length > 1 && <button className="button" onClick={() => chooseRegion('full')}>Cerrar todo</button>}
+            {open.map((zone, index) => {
+              const entry = data[zone]
+              return <article key={zone} className="anatomy-card" data-active={index === 0} style={{'--zone-color': CSS[entry.tone]} as CSSProperties}>
+                <header><h3>{entry.n}</h3><button className="button" aria-label={`Cerrar ${entry.n}`} onClick={() => closeZone(zone)}>×</button></header>
+                <p><strong>{entry.value} {entry.u}</strong> · {entry.lbl} · {LBL[entry.tone]}</p>
+                <p className="muted">{entry.base}</p>
+                <Trend history={entry.hist} value={entry.value} color={CSS[entry.tone]}/>
+                <p className="muted">Últimos 7 días · Simulación</p>
+                {entry.tone === 'rojo' && <p>Alerta dentro de la práctica.</p>}
+                <details open><summary>¿Por qué se mide?</summary><p>{entry.why}</p></details>
+                <details><summary>¿Cómo lo afecta el espacio?</summary><p>{entry.esp}</p></details>
+                <details><summary>¿Cuándo es una alarma?</summary><p>{entry.alarma}</p></details>
+                <details open><summary>¿Qué hacer en la práctica?</summary><ul>{entry.tips.map(tip => <li key={tip}>{tip}</li>)}</ul></details>
+              </article>
+            })}
+          </div>}
+      </div>
+      <details className="anatomy-telemetry">
+        <summary>Telemetría simulada de AEGIS · {regionLabels[region]}</summary>
+        <dl className="detail-list">{regionMetrics[region].map(metric => <div key={metric}><dt>{metricLabels[metric]}</dt>
+          <dd>{mission.metrics[metric].value} {mission.metrics[metric].unit}</dd></div>)}
+          {region === 'head' && <div><dt>Mood</dt><dd>{mission.wellness.mood}/5</dd></div>}
+        </dl>
+      </details>
+    </aside>
   </div>
 }
