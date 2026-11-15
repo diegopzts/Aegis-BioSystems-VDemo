@@ -93,12 +93,12 @@ def undo(activity_id: int) -> Change:
         db.execute("BEGIN IMMEDIATE")
         row = db.execute("SELECT * FROM companion_activity WHERE id=? AND undone=0", (activity_id,)).fetchone()
         if not row or row["operation"] not in ("create_wellness_entry", "delete_wellness_entry"):
-            raise StateError("Este cambio no se puede deshacer.")
+            raise StateError("This change cannot be undone.")
         context = MissionPosition(scenario=row["scenario"], day=row["day"])
         was_deleted = row["operation"] == "delete_wellness_entry"
         record = wellness.lookup(db, context.scenario, row["entry_id"], context.day, deleted=was_deleted)
         if not record or record["version"] != row["entry_version"]:
-            raise StateError("El registro cambió después de la operación.")
+            raise StateError("The record changed after the operation.")
         db.execute("UPDATE checkins SET deleted=?, version=version+1 WHERE id=?",
                    (int(not was_deleted), record["id"]))
         db.execute("UPDATE companion_activity SET undone=1 WHERE id=?", (activity_id,))

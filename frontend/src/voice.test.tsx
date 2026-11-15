@@ -169,7 +169,7 @@ it('can connect and play Gemini output without a microphone when launched from o
     event('turn_end', {session_id: id, turn: 1})
   })
   expect(played).toHaveLength(1)
-  expect(result.current.error).toMatch(/Micrófono no disponible/)
+  expect(result.current.error).toMatch(/Microphone unavailable/)
   unmount()
 })
 

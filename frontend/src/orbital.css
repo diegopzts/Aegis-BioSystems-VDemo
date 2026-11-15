@@ -165,7 +165,7 @@
   .orbital-experience.orbital-home .orbit-pilot { position: absolute; inset: 0 0 auto; }
   .orbital-home .voice-orb-panel > div {
     position: absolute;
-    top: min(calc(68svh - 105px), calc(66vw - 105px));
+    top: min(calc(68svh - 59px), calc(66vw - 59px));
     padding: 4px 12px;
     border-radius: 8px;
     background: #06091bd9;
@@ -215,3 +215,55 @@
     transform: none;
   }
 }
+/* Glass moons use the existing belt coordinates and depth. */
+.orbital-home .orbit-stage {min-height:max(78svh,460px)}
+.orbit-node {
+  width: 94px; min-width:0; padding:0; border:0; background:none; box-shadow:none; border-radius:0;
+  font-size:11px; line-height:1.15; text-align:center; font-weight:600;
+  color:#e0eeff; text-shadow:0 1px 5px #040819,0 0 4px #040819;
+}
+.orbit-node .orbit-moon {
+  display:grid; place-items:center; width:clamp(42px,7.5svh,76px); aspect-ratio:1; border-radius:50%;
+  border:1px solid #a6ccfa7a; background:radial-gradient(circle at 34% 26%,#b4eaff9c,#458ade77 24%,#38347575 57%,#141b39ad 78%,#7a9fd070 100%);
+  box-shadow:inset 0 1px 7px #bce9ff48,0 5px 12px #030719a6;
+  transition:background-color .25s,border-color .25s,box-shadow .25s,transform .25s;
+}
+.orbit-node:not([aria-current=true]):hover .orbit-moon {box-shadow:inset 0 1px 10px #a8ddff9e,0 0 18px #6bafff72}
+.orbit-node[aria-current=true] {border:0;background:none;box-shadow:none}
+.orbit-node[aria-current=true] .orbit-moon,.orbit-node:focus-visible .orbit-moon {
+  border-color:#9df5ff; box-shadow:inset 0 0 15px #b9f9ff87,0 0 0 3px #5ed5ff4c,0 0 24px #4bcaff82;
+  background:radial-gradient(circle at 34% 26%,#dffcffd9,#52caffad 29%,#2459a2a0 54%,#123455d9 82%,#84edffab);
+  transform:scale(1.07);
+}
+.orbit-node:focus-visible {outline:2px solid #b5f5ff;outline-offset:6px;border-radius:26px}
+.orbit-node .orbit-moon svg {color:#e4f8ff;filter:drop-shadow(0 0 2px #142748)}
+@media (max-width: 760px) {
+  .orbital-home .orbit-stage {min-height:530px}
+  .orbital-experience.orbital-home .orbit-pilot {position:absolute;inset:72px 0 auto}
+  .orbital-home .voice-orb-panel > div {position:absolute;top:375px}
+  .orbit-belt:not([hidden]) {position:absolute;inset:0;display:block;height:auto}
+  .orbit-trail {inset:9% 11% 24%;border-radius:50%}
+  .orbit-node {position:absolute;left:var(--node-x);top:var(--node-mobile-y);transform:translate(-50%,-50%);width:64px;font-size:10px}
+  .orbit-node .orbit-moon {width:44px}
+}
+@media (prefers-reduced-motion:reduce) {.orbit-moon {transition:none!important}}
+
+.stellar-star {position:relative;display:block;aspect-ratio:1;isolation:isolate}
+.stellar-star canvas {position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.stellar-star[data-renderer=fallback]::before {
+  content:'';position:absolute;inset:1%;border-radius:50%;
+  background:radial-gradient(circle,#1a69ee7d 0 48%,#438aff57 54%,#18436e1a 62%,transparent 71%);
+}
+.stellar-star[data-renderer=fallback]::after {
+  content:'';position:absolute;inset:15%;border-radius:50%;
+  background:
+    radial-gradient(ellipse at 30% 34%,#c8fcffb5 0%,transparent 25%),
+    repeating-conic-gradient(from 31deg at 38% 44%,#a2eeff54 0deg,#2c67e06b 6deg,#75c6ff82 12deg,#244a8f38 15deg),
+    repeating-radial-gradient(ellipse at 69% 31%,transparent 0 7px,#a4e6fc76 9px,#366acf58 13px,transparent 18px),
+    radial-gradient(circle at 33% 28%,#9deaff,#2d76db 58%,#162a74 91%,#96dcff);
+  box-shadow:0 0 10px #72cdffd9,0 0 25px #458ef896,inset 0 0 19px #a1e6ff94;
+}
+.stellar-star[data-renderer=fallback] canvas {visibility:hidden}
+.orbital-focus .stellar-star {width:clamp(86px,16vh,142px)}
+.orbit-node:hover .orbit-moon {transform:scale(1.045)}
+.orbit-node[aria-current=true]:hover .orbit-moon {transform:scale(1.07)}

@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from . import companion_state as state, config, wellness
 from .analytics import calendar, sleep_analysis
+from .crew import crew_status
 from .gemini import CompanionError, ChatReply, chat
 from .live import live
 from .live_vitals import MonitorUpdate, monitor
@@ -58,6 +59,11 @@ def vital_signs(scenario: Scenario = DEFAULT, metric: Metric = Metric.HEART, ran
     return apply_current_pulse(series, metric, range, active_situations(situations).read())
 
 
+@app.get("/api/crew")
+def crew(scenario: Scenario = DEFAULT, day: MissionDay = 30):
+    return crew_status(scenario, day)
+
+
 @app.get("/api/sleep")
 def sleep(scenario: Scenario = DEFAULT, day: MissionDay = 30):
     context = state.MissionPosition(scenario=scenario, day=day)
@@ -78,7 +84,7 @@ def wellness_history(scenario: Scenario = DEFAULT, day: MissionDay = 30):
 def local_origin(request: Request):
     origin = request.headers.get("origin")
     if origin and not config.origin_allowed(origin, request.headers.get("host")):
-        raise HTTPException(403, "Origen no autorizado.")
+        raise HTTPException(403, "Origin is not authorized.")
 
 
 @app.post("/api/live-vitals", status_code=204, dependencies=[Depends(local_origin)])
@@ -109,7 +115,7 @@ def limit_chat():
             chat_times.popleft()
         identity = visitor_id.get()
         if len(chat_times) >= 12 or (identity and sum(owner == identity for _, owner in chat_times) >= 4):
-            raise HTTPException(429, "Has enviado varias solicitudes. Espera un momento antes de volver a intentar.")
+            raise HTTPException(429, "Too many requests. Wait a moment and try again.")
         chat_times.append((now, identity))
 
 
@@ -135,7 +141,7 @@ def simulation_state():
 @app.post("/api/simulation/{scenario}/reset", response_model=Snapshot, dependencies=[Depends(local_origin)])
 def activate_simulation(scenario: Situation, request: Request, activation: Activation | None = None):
     if request.url.path.endswith("/reset") and scenario != Situation.NOMINAL:
-        raise HTTPException(422, "Solo se puede restaurar la situación nominal.")
+        raise HTTPException(422, "Only the nominal situation can be restored.")
     try:
         return active_situations(situations).activate(scenario, (activation or Activation()).event_id)
     except ValueError as exc:
@@ -174,14 +180,14 @@ async def voice(socket: WebSocket, scenario: Scenario = DEFAULT, day: MissionDay
             live_times.append((now, identity))
     if limited:
         await socket.accept()
-        await socket.send_json({"type": "error", "message": "Límite de voz de la demo. Cierra otras pestañas o espera un minuto."})
+        await socket.send_json({"type": "error", "message": "Demo voice limit reached. Close other tabs or wait a minute."})
         await socket.close(code=1008)
         return
     try:
         async with asyncio.timeout(12 * 60):
             await live(socket, scenario, day, workspace, session_id)
     except TimeoutError:
-        await socket.close(code=1000, reason="Límite de duración de la demo")
+        await socket.close(code=1000, reason="Demo duration limit")
     finally:
         with rate_lock:
             live_visitors.discard(identity)
@@ -201,7 +207,7 @@ def serve_frontend(directory, request_path: str):
         raise HTTPException(404)
     index = root / "index.html"
     if not index.is_file():
-        raise HTTPException(404, "El frontend aún no está compilado.")
+        raise HTTPException(404, "The frontend has not been built.")
     return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 

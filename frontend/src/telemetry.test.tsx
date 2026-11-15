@@ -35,7 +35,7 @@ it('uses only the existing mic node, leaves the output disconnected and cleans u
   const input = {connect: vi.fn(), disconnect: vi.fn()}
   const graph = {context: {state: 'running', createAnalyser: () => analyser}, input} as unknown as InputGraph
   const {rerender} = render(<VoiceOrb/>)
-  expect(screen.getByText('No disponible')).toBeTruthy()
+  expect(screen.getByText('Unavailable')).toBeTruthy()
   rerender(<VoiceOrb graph={graph}/>)
   act(() => vi.advanceTimersByTime(200))
   expect(screen.getByText(/\d+\/100/)).toBeTruthy()
@@ -43,7 +43,7 @@ it('uses only the existing mic node, leaves the output disconnected and cleans u
   expect(analyser.connect).not.toHaveBeenCalled()
   expect(getUserMedia).not.toHaveBeenCalled()
   rerender(<VoiceOrb/>)
-  expect(screen.getByText('No disponible')).toBeTruthy()
+  expect(screen.getByText('Unavailable')).toBeTruthy()
   expect(input.disconnect).toHaveBeenCalledWith(analyser)
   expect(analyser.disconnect).toHaveBeenCalledOnce()
   expect(vi.getTimerCount()).toBe(0)
@@ -51,15 +51,15 @@ it('uses only the existing mic node, leaves the output disconnected and cleans u
 
 it('positions real IDs, supports keyboard details, and renders notes as plain text', () => {
   render(<MoodConstellation history={[entry, {...entry, id: 13, stress: null}]}/>)
-  const star = screen.getByRole('button', {name: 'ID 12, Bien, estrés 2/5, energía 4/5'})
+  const star = screen.getByRole('button', {name: 'ID 12, Good, stress 2/5, energy 4/5'})
   expect(star.getAttribute('data-position')).toBe('158,70')
-  expect(screen.getByRole('button', {name: /ID 13.*estrés Sin dato/}).getAttribute('data-position')).toBe('502,70')
+  expect(screen.getByRole('button', {name: /ID 13.*stress No data/}).getAttribute('data-position')).toBe('502,70')
   fireEvent.focus(star)
   expect(within(screen.getByRole('tooltip')).getByText('<b>Texto personal</b>')).toBeTruthy()
   fireEvent.keyDown(star, {key: 'Enter'})
-  expect(screen.getByRole('region', {name: 'Detalle del autorregistro'}).textContent).toContain('ID 12')
-  fireEvent.click(screen.getByText('Lista accesible de autorregistros'))
-  expect(screen.getByRole('button', {name: 'Ver detalle de ID 12'})).toBeTruthy()
+  expect(screen.getByRole('region', {name: 'Check-in details'}).textContent).toContain('ID 12')
+  fireEvent.click(screen.getByText('Accessible list of check-ins'))
+  expect(screen.getByRole('button', {name: 'View details for ID 12'})).toBeTruthy()
 })
 
 it('keeps star identity on confirmed edits and removes a confirmed delete after its exit transition', () => {
@@ -90,9 +90,9 @@ import {OrbitalMonitor} from './OrbitalMonitor'
 
 it('positions AEGIS-1 using mission progress and exposes the autonomous link state', () => {
   const orbital = {distance_million_km: 377.74, one_way_seconds: 1260, one_way_label: '21 min 00 s',
-    link_status: 'normal', link_label: 'Enlace nominal', autonomous_override: false, synthetic: true} as const
+    link_status: 'normal', link_label: 'Link nominal', autonomous_override: false, synthetic: true} as const
   const {rerender} = render(<OrbitalMonitor orbital={orbital} day={30} plannedDays={120}/>)
   expect(screen.getByRole('img', {name: /AEGIS-1, 25%/}).style.left).toBe('25%')
   rerender(<OrbitalMonitor orbital={{...orbital, autonomous_override: true, link_status: 'warning'}} day={150} plannedDays={120}/>)
-  expect(screen.getByRole('img', {name: /100%.*nodo autónomo/}).style.left).toBe('100%')
+  expect(screen.getByRole('img', {name: /100%.*simulated autonomous mode/}).style.left).toBe('100%')
 })

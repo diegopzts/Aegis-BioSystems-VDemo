@@ -3,7 +3,7 @@ import { request } from './api'
 
 const OrbitalExperience = lazy(() => import('./OrbitalExperience'))
 const preferenceKey = 'aegis-ui'
-const unavailable = 'Experiencia orbital no disponible. Se muestra la vista clásica.'
+const unavailable = 'Orbital view unavailable. Classic view is active.'
 type Config = 'pending' | 'enabled' | 'disabled' | 'unavailable'
 
 function loadClassicPreference() {

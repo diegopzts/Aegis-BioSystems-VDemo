@@ -102,7 +102,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
   useEffect(() => {
     const socket = sessionRef.current?.socket
     if (socket?.readyState === WebSocket.OPEN && ui) socket.send(JSON.stringify({position: {scenario, day}, ui}))
-  }, [scenario, day, ui?.section, ui?.metric, ui?.range, ui?.region, ui?.view])
+  }, [scenario, day, ui?.section, ui?.metric, ui?.range, ui?.region, ui?.view, ui?.crewId])
 
   function fail(message: string) {
     cleanup()
@@ -118,10 +118,10 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
     try {
       await session.context.resume()
       if (sessionRef.current !== session) return
-      if (session.context.state !== 'running') setError('El navegador sigue pausando el audio. Pulsa Reanudar audio.')
+      if (session.context.state !== 'running') setError('The browser is still pausing audio. Select Resume audio.')
       else setError('')
     } catch {
-      if (sessionRef.current === session) setError('El navegador bloqueó la reproducción. Pulsa Reanudar audio.')
+      if (sessionRef.current === session) setError('The browser blocked playback. Select Resume audio.')
     }
   }
 
@@ -138,7 +138,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       const welcome = options.welcome?.()
       if (closing.current) await closing.current
       if (version !== ticket.current) return
-      if (!options.allowNoMic && !navigator.mediaDevices?.getUserMedia) throw new Error('El micrófono requiere localhost o HTTPS.')
+      if (!options.allowNoMic && !navigator.mediaDevices?.getUserMedia) throw new Error('Microphone access requires localhost or HTTPS.')
       const lease = await acquireAudio()
       if (version !== ticket.current) { await lease.release(); return }
       const context = lease.context
@@ -149,7 +149,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       sessionRef.current = session
       await context.resume()
       if (version !== ticket.current) return
-      if (context.state !== 'running') throw new Error('El navegador bloqueó el audio. Pulsa Reconectar para intentarlo de nuevo.')
+      if (context.state !== 'running') throw new Error('The browser blocked audio. Select Reconnect to try again.')
       permissionPending.current = true
       let stream: MediaStream | undefined
       try {
@@ -157,7 +157,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       } catch (error) {
         if (!options.allowNoMic || !(error instanceof DOMException) ||
             !['NotAllowedError', 'NotFoundError', 'SecurityError', 'NotReadableError'].includes(error.name)) throw error
-        if (version === ticket.current) setError('Micrófono no disponible. Puedes escuchar al asistente o escribir en el chat.')
+        if (version === ticket.current) setError('Microphone unavailable. You can listen to the assistant or use text chat.')
       } finally { permissionPending.current = false }
       if (version !== ticket.current) { stream?.getTracks().forEach(track => track.stop()); return }
       if (stream) {
@@ -181,8 +181,8 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
     } catch (error) {
       if (version === ticket.current) {
         const denied = error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')
-        fail(denied ? 'Permite el micrófono en el navegador y pulsa Reconectar.' :
-          error instanceof Error ? error.message : 'No se pudo iniciar el micrófono.')
+        fail(denied ? 'Allow microphone access, then select Reconnect.' :
+          error instanceof Error ? error.message : 'Could not start the microphone.')
       }
       return
     } finally { opening.current = false }
@@ -191,7 +191,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
     function updatePlayback(forceReport = false) {
       if (sessionRef.current !== session) return
       try { session.queue.pump() }
-      catch { fail('El navegador no pudo conectar o iniciar la salida de voz.'); return }
+      catch { fail('The browser could not start voice output.'); return }
       const stats = session.queue.diagnostics
       const running = session.context.state === 'running'
       setOutputLevel(running ? Math.round(Math.min(1, session.meter.read(session.context.currentTime) * 5) * 100) : 0)
@@ -247,7 +247,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       if (current.ui) url.searchParams.set('ui', JSON.stringify(current.ui))
       let socket: WebSocket
       try { socket = new WebSocket(url) }
-      catch { reconnect('No se pudo conectar a Gemini Live.'); return }
+      catch { reconnect('Could not connect to Gemini Live.'); return }
       session.socket = socket
       socket.binaryType = 'arraybuffer'
       const isCurrent = () => sessionRef.current === session && session.socket === socket
@@ -270,7 +270,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
         session.outcome = undefined
       }
       session.handshake = window.setTimeout(() => {
-        if (isCurrent()) reconnect('Gemini Live no respondió al conectar.')
+        if (isCurrent()) reconnect('Gemini Live did not respond during connection.')
       }, 20_000)
       socket.onopen = () => {
         const current = latest.current
@@ -278,11 +278,11 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       }
       socket.onclose = ({code}) => {
         if (!isCurrent()) return
-        if (code === 1008 || code === 1003) reconnect('Gemini Live rechazó la conexión de voz.', false)
-        else reconnect('Se perdió la conexión de voz. Pulsa Reconectar.')
+        if (code === 1008 || code === 1003) reconnect('Gemini Live rejected the voice connection.', false)
+        else reconnect('Voice connection lost. Select Reconnect.')
       }
       socket.onerror = () => {
-        if (isCurrent()) reconnect('No se pudo conectar a Gemini Live.')
+        if (isCurrent()) reconnect('Could not connect to Gemini Live.')
       }
       socket.onmessage = ({data}: MessageEvent<string | ArrayBuffer>) => {
         if (!isCurrent()) return
@@ -295,10 +295,10 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
           if (turn) beginTurn(turn)
           let buffer: AudioBuffer | undefined
           try { buffer = turn && format ? decodePcm(data, format.rate, format.channels, session.context) : undefined }
-          catch { fail('El navegador no pudo preparar el audio de Gemini.'); return }
+          catch { fail('The browser could not prepare Gemini audio.'); return }
           if (buffer) {
             if (!session.queue.push(buffer)) {
-              reconnect('Se alcanzó el límite de audio en espera. Se reproducirá el audio que ya llegó. Pulsa Reconectar al terminar.', false)
+              reconnect('The audio queue is full. Accepted audio will finish playing. Select Reconnect afterward.', false)
               updatePlayback()
               return
             }
@@ -356,7 +356,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
             if (Number.isInteger(event.rate) && event.rate >= 8000 && event.rate <= 96000 && event.channels === 1) session.rate = event.rate
             break
           case 'error': {
-            const message = typeof event.message === 'string' ? event.message : 'Gemini Live no está disponible.'
+            const message = typeof event.message === 'string' ? event.message : 'Gemini Live is unavailable.'
             reconnect(message, event.retryable === true)
             return
           }

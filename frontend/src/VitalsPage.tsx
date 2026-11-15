@@ -25,9 +25,9 @@ export function VitalsPage({scenario, day, revision, metric, span, setMetric, se
   const [mode, setMode] = useState<'line' | 'bar'>('line')
   const {data, error, retry} = useResource<VitalSeries>(`vitals?scenario=${scenario}&metric=${metric}&range=${span}&day=${day}`, revision, true)
   return <>
-    <Suspense fallback={<p role="status">Cargando monitor en vivo…</p>}><LiveVitalsMonitor/></Suspense>
+    <Suspense fallback={<p role="status">Loading live monitor…</p>}><LiveVitalsMonitor/></Suspense>
     <details className="panel content-panel" open={metric !== 'heartRate' || span !== '7d'}>
-    <summary>Historial simulado de la misión · independiente del monitor en vivo</summary>
+    <summary>Simulated mission history</summary>
     <div className="control-strip">{metrics.map(key => {
       const Icon = metricIcons[key]
       return <button key={key} className="button" aria-pressed={metric === key} onClick={() => setMetric(key)}><Icon size={16}/>{metricLabels[key]}</button>

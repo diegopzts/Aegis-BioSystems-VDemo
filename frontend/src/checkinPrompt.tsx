@@ -64,26 +64,26 @@ export type CheckinPromptState = ReturnType<typeof useCheckinPrompt>
 export function CheckinSettings({prompt}: {prompt: CheckinPromptState}) {
   const {settings, update} = prompt
   return <div className="companion-settings">
-    <label><input type="checkbox" checked={settings.enabled} onChange={e => update({enabled: e.target.checked})}/> Invitarme a un check-in dentro de AEGIS</label>
-    <label><input type="checkbox" checked={settings.paused} onChange={e => update({paused: e.target.checked})}/> Pausar check-ins</label>
-    <label>Frecuencia <select value={settings.every} onChange={e => update({every: Number(e.target.value) as Settings['every']})}>
-      {[1, 2, 3, 7].map(n => <option key={n} value={n}>{n === 1 ? 'Cada día simulado' : `Cada ${n} días simulados`}</option>)}
+    <label><input type="checkbox" checked={settings.enabled} onChange={e => update({enabled: e.target.checked})}/> Invite me to check in within AEGIS</label>
+    <label><input type="checkbox" checked={settings.paused} onChange={e => update({paused: e.target.checked})}/> Pause check-ins</label>
+    <label>Frequency <select value={settings.every} onChange={e => update({every: Number(e.target.value) as Settings['every']})}>
+      {[1, 2, 3, 7].map(n => <option key={n} value={n}>{n === 1 ? 'Every simulated day' : `Every ${n} simulated days`}</option>)}
     </select></label>
-    <label>Desde las <input type="time" value={settings.time} onChange={e => {if (e.target.value) update({time: e.target.value})}}/> (hora local)</label>
-    <label><input type="checkbox" checked={settings.metrics} onChange={e => update({metrics: e.target.checked})}/> Mencionar métricas manuales recientes en la invitación</label>
+    <label>Starting at <input type="time" value={settings.time} onChange={e => {if (e.target.value) update({time: e.target.value})}}/> (local time)</label>
+    <label><input type="checkbox" checked={settings.metrics} onChange={e => update({metrics: e.target.checked})}/> Mention recent manual ratings in the invitation</label>
   </div>
 }
 
 export function CheckinPrompt({mission, metrics, dismiss, open}: {mission: Mission; metrics: boolean; dismiss: () => void; open: () => void}) {
   const recent = mission.wellness
-  return <section className="panel checkin-invite" aria-label="Invitación de bienestar">
-    <HeartHandshake size={22}/><div><strong>¿Cómo estás, cómo te sientes hoy?</strong>
+  return <section className="panel checkin-invite" aria-label="Wellbeing invitation">
+    <HeartHandshake size={22}/><div><strong>How are you feeling today?</strong>
       <p>{metrics && recent.source === 'checkin' && recent.energy != null
-        ? `Registraste energía de ${recent.energy}/5 en el día ${recent.day}. ¿Cómo lo estás viviendo?`
-        : 'Si te apetece, puedes conversar un momento o registrar cómo te sientes.'}</p>
-      <div className="button-group"><button className="button" onClick={open}>Abrir AEGIS</button>
-        <button className="button" onClick={dismiss}>Ahora no</button>
-        <button className="button" onClick={dismiss}>No volver a preguntarme hoy</button></div>
+        ? `You recorded an energy rating of ${recent.energy}/5 on day ${recent.day}. How are you feeling now?`
+        : 'Take a moment to talk or record how you feel.'}</p>
+      <div className="button-group"><button className="button" onClick={open}>Open AEGIS</button>
+        <button className="button" onClick={dismiss}>Not now</button>
+        <button className="button" onClick={dismiss}>Do not ask again today</button></div>
     </div>
   </section>
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 import type { VoiceState } from './voice'
 import type { InputGraph } from './simulation'
+import {BlueStar} from './BlueStar'
 
 export function smoothVocalActivity(samples: Float32Array, previous: number) {
   if (!samples.length) return previous
@@ -11,8 +12,8 @@ export function smoothVocalActivity(samples: Float32Array, previous: number) {
   return previous + (target - previous) * (target > previous ? .24 : .15)
 }
 
-export function VoiceOrb({graph, breathing = false, alert = false, output = 0, state = 'disconnected', label = 'En reposo'}: {
-  graph?: InputGraph; breathing?: boolean; alert?: boolean; output?: number; state?: VoiceState; label?: string
+export function VoiceOrb({graph, breathing = false, alert = false, output = 0, state = 'disconnected', label = 'Idle', stellar = false}: {
+  graph?: InputGraph; breathing?: boolean; alert?: boolean; output?: number; state?: VoiceState; label?: string; stellar?: boolean
 }) {
   const [activity, setActivity] = useState<number>()
   const paint = useId()
@@ -52,8 +53,8 @@ export function VoiceOrb({graph, breathing = false, alert = false, output = 0, s
     '--orb-ring-paint': `url("#${paint}-ring")`,
     '--orb-wave-paint': `url("#${paint}-wave")`,
   } as CSSProperties
-  return <section className="voice-orb-panel" aria-label="Actividad vocal estimada">
-    <svg viewBox="0 0 64 64" className="voice-orb" data-active={state !== 'disconnected'} data-voice-state={state} style={style} aria-hidden="true">
+  return <section className="voice-orb-panel" aria-label="Estimated voice activity">
+    {stellar ? <BlueStar activity={intensity}/> : <svg viewBox="0 0 64 64" className="voice-orb" data-active={state !== 'disconnected'} data-voice-state={state} style={style} aria-hidden="true">
       <defs>
         <radialGradient id={`${paint}-core`} cx="36%" cy="29%" r="73%">
           <stop offset="0" stopColor="#e3ffff"/>
@@ -85,10 +86,10 @@ export function VoiceOrb({graph, breathing = false, alert = false, output = 0, s
       <circle className="voice-orb-segments" cx="32" cy="32" r="26"/>
       <circle className="voice-orb-core" cx="32" cy="32" r="14"/>
       <circle className="voice-orb-rim" cx="32" cy="32" r="20"/>
-    </svg>
-    <div><strong>Actividad vocal estimada</strong><p role="status">{label}</p>
-      <p>{available ? `${activity}/100` : 'No disponible'}</p>
-      <small>Proxy acústico experimental; no mide emociones, estrés clínico ni salud</small>
+    </svg>}
+    <div><strong>Estimated voice activity</strong><p role="status">{label}</p>
+      <p>{available ? `${activity}/100` : 'Unavailable'}</p>
+      <small>Experimental acoustic estimate for voice activity only</small>
     </div>
   </section>
 }

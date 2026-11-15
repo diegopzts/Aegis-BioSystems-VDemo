@@ -12,6 +12,7 @@ from .companion_state import Change, MissionPosition, StateError, activity, audi
 from .situations import LightingInput, ReserveInput, SectorInput, StabilizeInput, active_situations, apply_current_pulse, situations
 from .interface_actions import ACTION, Action
 from .live_vitals import monitor
+from .crew import crew_status
 from .models import Checkin, EntryId, Metric, MissionDay, Notes, Rating, Scenario, Span, StrictModel
 
 Period = Literal["7d", "14d", "30d"]
@@ -82,41 +83,46 @@ class Tool:
 
 
 TOOLS = {
-    "get_live_vitals": Tool(
-        "Para preguntas sobre la frecuencia actual, señales en vivo o cambios del último minuto en Vital Monitoring. "
-        "Los valores vienen del monitor sintético abierto y son independientes del historial de misión. No hay datos "
-        "si está cerrado, pausado o en USB local. Usa la cobertura real y no llames pulso arterial a la frecuencia "
-        "del ECG (especialmente FV); no diagnostiques ni recomiendes tratamiento.", StrictModel,
+    "get_crew_status": Tool(
+        "Read the six synthetic crew profiles and duty status. The result includes the selected crew member "
+        "and their sleep history. Use this for who is resting, pending check-ins, and crew summaries. "
+        "Operational status is separate from wellness.", StrictModel,
     ),
-    "get_simulation_state": Tool("Estado, biometría ficticia, hábitat, ambiente y acciones de la situación activa.", StrictModel),
-    "seal_habitat_sector": Tool("Sella un sector exclusivamente en el hábitat simulado.", SectorInput, "habitat"),
-    "activate_oxygen_reserve": Tool("Ajusta la reserva de oxígeno ficticia.", ReserveInput, "habitat"),
-    "set_cabin_lighting": Tool("Ajusta el porcentaje de iluminación ficticia.", LightingInput, "habitat"),
-    "stabilize_simulated_environment": Tool("Aplica hasta tres acciones permitidas al hábitat sintético.", StabilizeInput, "habitat"),
-    "get_mission_overview": Tool("Estado y progreso de la misión sintética, sin datos de salud.", StrictModel),
-    "get_vitals_summary": Tool("Indicador sintético, serie y tendencia para 24h, 7d o 30d.", VitalArgs),
-    "get_sleep_records": Tool("Detalles de sueño por periodo o hasta diez días concretos.", SleepArgs),
-    "analyze_sleep": Tool("Criterios, evidencia y recomendaciones de sueño hasta el día actual.", StrictModel),
-    "get_wellness_summary": Tool("Promedios de ánimo, estrés y energía por periodo y procedencia. Sin notas.", PeriodArgs),
-    "get_wellness_entries": Tool("Hasta diez registros manuales, con notas si son pertinentes. Usa before_id para paginar.", EntriesArgs),
-    "get_alerts": Tool("Alertas registradas con evidencia, gravedad y revisión.", StrictModel),
-    "get_full_mission_context": Tool("Resumen integrado breve. Resume los módulos principales y omite notas.", StrictModel),
-    "create_wellness_entry": Tool("Crea un nuevo check-in solo si se pidió guardarlo y los tres valores son explícitos. Omite notes salvo petición expresa.", Checkin, "write"),
-    "update_wellness_entry": Tool("Edita un registro manual por ID y campos solicitados.", UpdateArgs, "write"),
-    "delete_wellness_entry": Tool("Borra un registro manual por ID. El borrado es reversible.", EntryArgs, "write"),
-    "acknowledge_alert": Tool("Marca como revisada una alerta autorizada del día actual.", AlertArgs, "write"),
-    "set_mission_scenario": Tool("Selecciona un escenario permitido, conservando el día.", ScenarioArgs, "write"),
-    "advance_mission": Tool("Avanza exactamente un día, hasta el día 30.", StrictModel, "write"),
-    "reset_mission": Tool("Vuelve al día 1 del escenario habitual. Se conservan los registros y alertas revisadas.", StrictModel, "write"),
-    "get_simulator_state": Tool("Escenarios, posición, límites de días y estado de la interfaz actual.", StrictModel),
-    "get_activity": Tool("Últimos 30 cambios persistidos y cuáles se pueden deshacer.", StrictModel),
-    "undo_change": Tool("Deshace un cambio reversible por identificador de actividad.", EntryArgs, "write"),
+    "get_live_vitals": Tool(
+        "Read the live synthetic ECG and oxygen readings and the available last-minute trend, separate from "
+        "mission history. Data is unavailable when the monitor is closed, paused, or using local USB. "
+        "Report actual coverage. Do not call ECG rate an arterial pulse, diagnose, or recommend treatment.", StrictModel,
+    ),
+    "get_simulation_state": Tool("Read the active simulation's state, synthetic biometrics and habitat actions.", StrictModel),
+    "seal_habitat_sector": Tool("Seal a sector of the simulated habitat only.", SectorInput, "habitat"),
+    "activate_oxygen_reserve": Tool("Set the simulated oxygen reserve.", ReserveInput, "habitat"),
+    "set_cabin_lighting": Tool("Set the simulated lighting level.", LightingInput, "habitat"),
+    "stabilize_simulated_environment": Tool("Apply up to three allowed actions to the simulated habitat.", StabilizeInput, "habitat"),
+    "get_mission_overview": Tool("Read synthetic mission status and progress, excluding health data.", StrictModel),
+    "get_vitals_summary": Tool("Read a synthetic vital sign and trend for 24 hours, 7 days, or 30 days.", VitalArgs),
+    "get_sleep_records": Tool("Read sleep details for a period or up to ten individual days.", SleepArgs),
+    "analyze_sleep": Tool("Read sleep criteria, evidence, and recommendations through the current day.", StrictModel),
+    "get_wellness_summary": Tool("Read average mood, energy, and stress by period and source without notes.", PeriodArgs),
+    "get_wellness_entries": Tool("Read up to ten manual check-ins. Include notes only when relevant. Paginate with before_id.", EntriesArgs),
+    "get_alerts": Tool("Read recorded alerts, evidence, severity, and review status.", StrictModel),
+    "get_full_mission_context": Tool("Read a short summary across mission modules without private notes.", StrictModel),
+    "create_wellness_entry": Tool("Create a check-in only on explicit request to save it with the three values provided. Include notes only on explicit request.", Checkin, "write"),
+    "update_wellness_entry": Tool("Edit requested fields of a manual record by ID.", UpdateArgs, "write"),
+    "delete_wellness_entry": Tool("Reversibly remove a manual record by ID.", EntryArgs, "write"),
+    "acknowledge_alert": Tool("Mark a supported alert for the current day as reviewed.", AlertArgs, "write"),
+    "set_mission_scenario": Tool("Select an allowed scenario and preserve the current day.", ScenarioArgs, "write"),
+    "advance_mission": Tool("Advance exactly one day, up to day 30.", StrictModel, "write"),
+    "reset_mission": Tool("Return to day 1 of the default scenario. Keep records and reviewed alerts.", StrictModel, "write"),
+    "get_simulator_state": Tool("Read simulation scenarios, mission position, date limits, and UI state.", StrictModel),
+    "get_activity": Tool("Read the latest 30 stored changes and which can be undone.", StrictModel),
+    "undo_change": Tool("Undo a reversible change by activity ID.", EntryArgs, "write"),
     "control_ui": Tool(
-        "Navega a un módulo, cambia gráfica o ajusta el visor por solicitud explícita. "
-        "BioSystems 3D admite cuerpo completo, cabeza, pecho y extremidades, con vistas frontal, izquierda, "
-        "derecha y posterior. Para restablecer usa full/front. El modelo es musculoesquelético: no muestra "
-        "órganos internos ni el sistema cardiovascular. No ofrezcas capas ni selecciones de órganos, ni "
-        "atribuyas mediciones clínicas a la anatomía del visor.",
+        "Apply a supported interface action on explicit request. Navigate with crew for Crew Management or "
+        "relax for Relax Room. Use the crew action to select a known crewId. Use relax for start_breathing, "
+        "play_ambient, pause_ambient, stop_ambient, open_memory or open_zen. Use orbit to return to the orbital view. "
+        "Use chart to select a vital sign. "
+        "BioSystems 3D supports full body, head, chest and limbs from the front, left, right or back. "
+        "Reset with full and front. The model shows musculoskeletal anatomy. Do not offer organ or cardiovascular views.",
         UiArgs, "ui",
     ),
 }
@@ -174,7 +180,10 @@ def wellbeing(context, period: Period):
 def read(name, args, context, ui) -> ReadResult:
     scenario, day = context.scenario, context.day
     provenance: Source = "synthetic_simulation"
-    if name == "get_live_vitals":
+    if name == "get_crew_status":
+        data = crew_status(scenario, day)
+        data["selectedCrewId"] = (ui or {}).get("crewId") or "AST-01"
+    elif name == "get_live_vitals":
         data = monitor().read()
     elif name == "get_mission_overview":
         position = simulation.dataset(scenario)[day - 1]
@@ -182,7 +191,7 @@ def read(name, args, context, ui) -> ReadResult:
                 "date": position["date"], "daysAvailable": simulation.DAYS, "plannedDays": 210}
     elif name == "get_vitals_summary":
         if args.day and args.day > day:
-            raise StateError("Ese día todavía no está disponible.")
+            raise StateError("That day is not yet available.")
         data = simulation.vitals(scenario, args.metric, args.range, args.day or day)
         if (args.day or day) == day:
             apply_current_pulse(data, args.metric, args.range, active_situations(situations).read())
@@ -191,7 +200,7 @@ def read(name, args, context, ui) -> ReadResult:
     elif name == "get_sleep_records":
         rows = analytics.calendar(scenario, day=day)
         if any(item > day for item in args.days):
-            raise StateError("Un día solicitado todavía no está disponible.")
+            raise StateError("A requested day is not yet available.")
         data = [row for row in rows if row["day"] in args.days] if args.days else rows[-int(args.period[:-1]):]
     elif name == "analyze_sleep":
         data = analytics.sleep_analysis(scenario, day=day)
@@ -226,9 +235,9 @@ def apply_change(name, args, context) -> Change:
     if name == "undo_change":
         return undo(args.id)
     if name == "acknowledge_alert" and not any(item["id"] == args.id for item in alerts(context)):
-        raise StateError("La alerta no existe en el día actual.")
+        raise StateError("No matching alert exists for the current day.")
     if name == "advance_mission" and day == simulation.DAYS:
-        raise StateError("Ya estás en el último día simulado. Puedes volver al día 1 con un reinicio.")
+        raise StateError("This is the final simulated day. Reset to return to day 1.")
     with closing(store()) as db, db:
         db.execute("BEGIN IMMEDIATE")
         if name.endswith("_wellness_entry"):
@@ -238,7 +247,7 @@ def apply_change(name, args, context) -> Change:
             else:
                 previous = wellness.lookup(db, scenario, args.id, day)
                 if not previous:
-                    raise StateError("El registro manual no existe en esta vista.")
+                    raise StateError("The manual record is unavailable in this view.")
                 version = previous["version"] + 1
                 deleted = name == "delete_wellness_entry"
                 if deleted:
@@ -270,7 +279,7 @@ def apply_change(name, args, context) -> Change:
 def dispatch(name, args, context, ui=None, *, allow_writes=True, event_id=None):
     tool = TOOLS.get(name)
     if not tool:
-        return {"error": "Herramienta desconocida."}, None, None
+        return {"error": "Unknown tool."}, None, None
     try:
         values = tool.model.model_validate(args)
         if name == "get_simulation_state":
@@ -282,17 +291,17 @@ def dispatch(name, args, context, ui=None, *, allow_writes=True, event_id=None):
                 return {"error": str(exc)}, None, None
             return {"result": state.model_dump(mode="json")}, None, None
         if tool.operation == "ui":
-            return {"result": "Acción de interfaz aplicada"}, ACTION.validate_python(values.action), None
+            return {"result": "Interface action accepted"}, ACTION.validate_python(values.action), None
         if tool.operation == "write":
             if not allow_writes:
-                raise StateError("Ya se aplicó un cambio. Solicita el siguiente cambio en otro turno.")
+                raise StateError("One change has already been applied. Request the next change in a new turn.")
             change = apply_change(name, values, context)
             return {"result": change.model_dump(mode="json")}, None, change
         result = read(name, values, context, ui)
         return {"result": result.model_dump(mode="json")}, None, None
     except ValidationError:
-        return {"error": "Argumentos inválidos."}, None, None
+        return {"error": "Invalid arguments."}, None, None
     except DatabaseError:
-        return {"error": "No se pudo completar la operación local."}, None, None
+        return {"error": "Could not complete the local operation."}, None, None
     except StateError as exc:
         return {"error": str(exc)}, None, None

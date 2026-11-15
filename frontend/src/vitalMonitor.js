@@ -35,18 +35,18 @@ export function mountVitalMonitor(root, onSample) {
       beatsAnalyzed: 0,
       liveMetrics: {
         bpm: 0,
-        ritmo: 'CALIBRANDO SEÑAL...',
+        ritmo: 'CALIBRATING SIGNAL...',
         colorBpm: '#38bdf8',
-        ondaP: 'Analizando...',
-        subP: 'Esperando latido',
+        ondaP: 'Analyzing...',
+        subP: 'Waiting for heartbeat',
         pr: '--- ms',
-        subPr: 'En curso',
+        subPr: 'In progress',
         qrs: '--- ms',
-        subQrs: 'En curso',
+        subQrs: 'In progress',
         qtc: '--- ms',
-        subQtc: 'En curso',
+        subQtc: 'In progress',
         st: '0.00 mV',
-        subSt: 'Calibrando',
+        subSt: 'Calibrating',
         esAlerta: false,
         severidad: 0,
         colorAlerta: '#10b981',
@@ -68,7 +68,7 @@ export function mountVitalMonitor(root, onSample) {
     c.qrsMs = parseInt(el('cust-slider-qrs').value, 10);
     c.tAmp = parseFloat(el('cust-slider-t').value);
 
-    el('cust-lbl-bpm').textContent = `${c.bpm} LPM`;
+    el('cust-lbl-bpm').textContent = `${c.bpm} BPM`;
     el('cust-lbl-st').textContent = `${c.stMv >= 0 ? '+' : ''}${c.stMv.toFixed(2)} mV`;
     el('cust-lbl-p').textContent = `${c.pAmp.toFixed(2)} mV`;
     el('cust-lbl-pr').textContent = `${c.prMs} ms`;
@@ -94,93 +94,80 @@ export function mountVitalMonitor(root, onSample) {
     const qtBaseMs = 260 + c.qrsMs + (c.tAmp < 0 ? 45 : 25);
     const qtcMs = Math.round(qtBaseMs / Math.sqrt(rrSec));
 
-    let hallazgos = [];
     let severidad = 0;
     let colorBpm = '#10b981';
-    let ritmo = 'RITMO PERSONALIZADO NORMAL';
+    let ritmo = 'NORMAL CUSTOM RHYTHM';
 
     if (c.bpm < 50) {
-      ritmo = 'BRADICARDIA MARCADA';
+      ritmo = 'MARKED BRADYCARDIA';
       colorBpm = '#f59e0b';
       severidad = Math.max(severidad, 2);
-      hallazgos.push(`bradicardia marcada (${c.bpm} LPM)`);
     } else if (c.bpm < 60) {
-      ritmo = 'BRADICARDIA SINUSAL';
+      ritmo = 'SINUS BRADYCARDIA';
       colorBpm = '#38bdf8';
       severidad = Math.max(severidad, 1);
-      hallazgos.push(`bradicardia sinusal (${c.bpm} LPM)`);
     } else if (c.bpm > 150) {
-      ritmo = 'TAQUICARDIA SEVERA';
+      ritmo = 'SEVERE TACHYCARDIA';
       colorBpm = '#ef4444';
       severidad = Math.max(severidad, 3);
-      hallazgos.push(`taquicardia severa (${c.bpm} LPM)`);
     } else if (c.bpm > 100) {
-      ritmo = 'TAQUICARDIA SINUSAL';
+      ritmo = 'SINUS TACHYCARDIA';
       colorBpm = '#f59e0b';
       severidad = Math.max(severidad, 1);
-      hallazgos.push(`taquicardia sinusal (${c.bpm} LPM)`);
     }
 
     const hayP = c.pAmp >= 0.04;
     let subPr = 'Normal (120-200)';
     if (!hayP) {
-      subPr = 'Sin onda P';
+      subPr = 'No P wave';
       severidad = Math.max(severidad, 2);
-      hallazgos.push('ausencia de onda P sinusal (ritmo nodal/unión)');
     } else if (c.prMs > 200) {
-      subPr = '⚠️ PR Prolongado (>200)';
+      subPr = '⚠️ Prolonged PR (>200)';
       severidad = Math.max(severidad, 1);
-      hallazgos.push(`bloqueo AV de 1.er grado (PR ${c.prMs} ms)`);
     } else if (c.prMs < 120) {
-      subPr = '⚠️ PR Corto (<120)';
+      subPr = '⚠️ Short PR (<120)';
       severidad = Math.max(severidad, 1);
-      hallazgos.push(`preexcitación / PR corto (${c.prMs} ms)`);
     }
 
     const qrsAncho = c.qrsMs >= 120;
     if (qrsAncho) {
       severidad = Math.max(severidad, 2);
-      hallazgos.push(`complejo QRS ensanchado (${c.qrsMs} ms, sugiere bloqueo de rama o ritmo ventricular)`);
     }
 
-    let subSt = 'Isoeléctrico';
+    let subSt = 'Isoelectric';
     let esAlertaST = false;
     if (c.stMv >= 0.15) {
-      ritmo = '⚠️ SUPRADESNIVEL ST (IAMCEST)';
+      ritmo = '⚠️ ST ELEVATION (STEMI)';
       colorBpm = '#ef4444';
-      subSt = '🚨 SUPRADESNIVEL ST';
+      subSt = '🚨 ST ELEVATION';
       esAlertaST = true;
       severidad = 3;
-      hallazgos.push(`elevación crítica del segmento ST (${c.stMv >= 0 ? '+' : ''}${c.stMv.toFixed(2)} mV) compatible con lesión subepicárdica / IAMCEST`);
     } else if (c.stMv <= -0.10) {
-      ritmo = '⚠️ INFRADESNIVEL ST (ISQUEMIA)';
+      ritmo = '⚠️ ST DEPRESSION (ISCHEMIA)';
       colorBpm = '#f59e0b';
-      subSt = '⚠️ INFRADESNIVEL ST';
+      subSt = '⚠️ ST DEPRESSION';
       esAlertaST = true;
       severidad = Math.max(severidad, 2);
-      hallazgos.push(`depresión del segmento ST (${c.stMv.toFixed(2)} mV) compatible con isquemia subendocárdica`);
     }
 
     if (c.tAmp <= -0.10) {
       severidad = Math.max(severidad, 2);
-      hallazgos.push(`onda T invertida (${c.tAmp.toFixed(2)} mV)`);
     } else if (c.tAmp >= 0.45) {
       severidad = Math.max(severidad, 1);
-      hallazgos.push(`onda T picuda/hiperaguda (+${c.tAmp.toFixed(2)} mV)`);
     }
 
     return {
       bpm: c.bpm,
       ritmo,
       colorBpm,
-      ondaP: hayP ? 'Presente' : 'Ausente',
-      subP: hayP ? `Amplitud (+${c.pAmp.toFixed(2)} mV)` : '0.00 mV (Sin onda P)',
+      ondaP: hayP ? 'Present' : 'Absent',
+      subP: hayP ? `Amplitude (+${c.pAmp.toFixed(2)} mV)` : '0.00 mV (No P wave)',
       pr: hayP ? `${c.prMs} ms` : '---',
       subPr,
       qrs: `${c.qrsMs} ms`,
-      subQrs: qrsAncho ? '⚠️ QRS Ancho (≥120)' : 'Estrecho (<120)',
+      subQrs: qrsAncho ? '⚠️ Wide QRS (≥120)' : 'Narrow (<120)',
       qtc: `${qtcMs} ms`,
-      subQtc: qtcMs <= 450 ? 'Normal (<450)' : '⚠️ QTc Prolongado',
+      subQtc: qtcMs <= 450 ? 'Normal (<450)' : '⚠️ Prolonged QTc',
       st: `${c.stMv >= 0 ? '+' : ''}${c.stMv.toFixed(2)} mV`,
       subSt,
       esAlerta: esAlertaST,
@@ -196,7 +183,7 @@ export function mountVitalMonitor(root, onSample) {
     if (spo2 >= 95) {
       return {
         categoria: 'sano',
-        badge: 'SANO (95–100%)',
+        badge: 'NORMAL (95–100%)',
         color: '#10b981',
         bgBadge: 'rgba(16, 185, 129, 0.15)',
         borderBadge: 'rgba(16, 185, 129, 0.4)',
@@ -206,7 +193,7 @@ export function mountVitalMonitor(root, onSample) {
     } else if (spo2 >= 90) {
       return {
         categoria: 'leve',
-        badge: 'HIPOXIA LEVE (90–94%)',
+        badge: 'MILD HYPOXIA (90–94%)',
         color: '#38bdf8',
         bgBadge: 'rgba(56, 189, 248, 0.15)',
         borderBadge: 'rgba(56, 189, 248, 0.45)',
@@ -216,7 +203,7 @@ export function mountVitalMonitor(root, onSample) {
     } else if (spo2 >= 85) {
       return {
         categoria: 'moderada',
-        badge: 'HIPOXIA MODERADA (85–89%)',
+        badge: 'MODERATE HYPOXIA (85–89%)',
         color: '#f59e0b',
         bgBadge: 'rgba(245, 158, 11, 0.2)',
         borderBadge: 'rgba(245, 158, 11, 0.5)',
@@ -226,7 +213,7 @@ export function mountVitalMonitor(root, onSample) {
     } else {
       return {
         categoria: 'grave',
-        badge: '🚨 HIPOXEMIA GRAVE (≤ 84%)',
+        badge: '🚨 SEVERE HYPOXEMIA (≤ 84%)',
         color: '#ef4444',
         bgBadge: 'rgba(239, 68, 68, 0.25)',
         borderBadge: '#ef4444',
@@ -309,7 +296,7 @@ export function mountVitalMonitor(root, onSample) {
   // ============================================================================
   const RANGOS_RADIACION = {
     saludable: {
-      etiqueta: 'Saludable (Basal)',
+      etiqueta: 'Normal baseline',
       color: '#10b981',
       severidad: 0,
       h2o2: 1.20, pH2o2: 15, cH2o2: '#10b981',
@@ -320,7 +307,7 @@ export function mountVitalMonitor(root, onSample) {
       mda: 0.85,  pMda: 20,  cMda: '#10b981',
     },
     ligero: {
-      etiqueta: 'Ligero (Exposición Baja)',
+      etiqueta: 'Mild exposure',
       color: '#38bdf8',
       severidad: 1,
       h2o2: 4.80, pH2o2: 38, cH2o2: '#38bdf8',
@@ -331,7 +318,7 @@ export function mountVitalMonitor(root, onSample) {
       mda: 1.55,  pMda: 36,  cMda: '#38bdf8',
     },
     preocupante: {
-      etiqueta: 'Preocupante (Exposición Moderada)',
+      etiqueta: 'Moderate exposure',
       color: '#f59e0b',
       severidad: 2,
       h2o2: 11.50, pH2o2: 68, cH2o2: '#f59e0b',
@@ -342,7 +329,7 @@ export function mountVitalMonitor(root, onSample) {
       mda: 2.85,   pMda: 64,  cMda: '#f59e0b',
     },
     peligro: {
-      etiqueta: 'Peligro / Crítico (Exposición Aguda Severa)',
+      etiqueta: 'Severe acute exposure',
       color: '#ef4444',
       severidad: 3,
       h2o2: 21.80, pH2o2: 96, cH2o2: '#ef4444',
@@ -359,36 +346,36 @@ export function mountVitalMonitor(root, onSample) {
   // ============================================================================
   const PERFILES_ECG = {
     normal: {
-      bpm: 77, ritmo: 'RITMO SINUSAL', colorBpm: '#10b981',
-      ondaP: 'Presente', subP: 'Sinusal (+)',
+      bpm: 77, ritmo: 'SINUS RHYTHM', colorBpm: '#10b981',
+      ondaP: 'Present', subP: 'Sinus (+)',
       pr: '150 ms', subPr: 'Normal (120-200)',
-      qrs: '88 ms', subQrs: 'Estrecho (<120)',
+      qrs: '88 ms', subQrs: 'Narrow (<120)',
       qtc: '395 ms', subQtc: 'Normal (<440)',
-      st: '+0.01 mV', subSt: 'Isoeléctrico', esAlerta: false, severidad: 0,
+      st: '+0.01 mV', subSt: 'Isoelectric', esAlerta: false, severidad: 0,
     },
     stemi: {
-      bpm: 98, ritmo: 'TAQUICARDIA • IAMCEST', colorBpm: '#ef4444',
-      ondaP: 'Presente', subP: 'Sinusal (+)',
+      bpm: 98, ritmo: 'TACHYCARDIA • STEMI', colorBpm: '#ef4444',
+      ondaP: 'Present', subP: 'Sinus (+)',
       pr: '162 ms', subPr: 'Normal (120-200)',
       qrs: '98 ms', subQrs: 'Normal (<120)',
       qtc: '415 ms', subQtc: 'Normal (<440)',
-      st: '+0.28 mV', subSt: '🚨 SUPRADESNIVEL ST', esAlerta: true, severidad: 3,
+      st: '+0.28 mV', subSt: '🚨 ST ELEVATION', esAlerta: true, severidad: 3,
     },
     fv: {
-      bpm: 245, ritmo: 'FIBRILACIÓN VENTRICULAR', colorBpm: '#ef4444',
-      ondaP: 'Ausente', subP: 'Caótica',
-      pr: '---', subPr: 'No medible',
-      qrs: '165 ms', subQrs: 'Desorganizado',
-      qtc: '---', subQtc: 'No medible',
-      st: 'Indeterminado', subSt: 'Ondas FV', esAlerta: true, severidad: 3,
+      bpm: 245, ritmo: 'VENTRICULAR FIBRILLATION', colorBpm: '#ef4444',
+      ondaP: 'Absent', subP: 'Chaotic',
+      pr: '---', subPr: 'Unmeasurable',
+      qrs: '165 ms', subQrs: 'Disorganized',
+      qtc: '---', subQtc: 'Unmeasurable',
+      st: 'Indeterminate', subSt: 'VF waves', esAlerta: true, severidad: 3,
     },
     paro: {
-      bpm: 0, ritmo: 'ASISTOLIA / PARO', colorBpm: '#ef4444',
-      ondaP: 'Ausente', subP: 'Sin actividad',
-      pr: '---', subPr: 'Sin actividad',
-      qrs: '0 ms', subQrs: 'Ausente',
-      qtc: '---', subQtc: 'Sin actividad',
-      st: '0.00 mV', subSt: 'Línea Isoeléctrica', esAlerta: true, severidad: 3,
+      bpm: 0, ritmo: 'ASYSTOLE / ARREST', colorBpm: '#ef4444',
+      ondaP: 'Absent', subP: 'No activity',
+      pr: '---', subPr: 'No activity',
+      qrs: '0 ms', subQrs: 'Absent',
+      qtc: '---', subQtc: 'No activity',
+      st: '0.00 mV', subSt: 'Isoelectric line', esAlerta: true, severidad: 3,
     }
   };
 
@@ -520,7 +507,7 @@ export function mountVitalMonitor(root, onSample) {
   function actualizarInterfazCompleta() {
     let mEcg;
     if (state.fuente === 'USB') {
-      mEcg = {...usbStatsEmpty.liveMetrics, ritmo: 'SOLO SEÑAL ADC', ondaP: '—', subP: '', pr: '—', subPr: '', qrs: '—', subQrs: '', qtc: '—', subQtc: '', st: '—', subSt: ''};
+      mEcg = {...usbStatsEmpty.liveMetrics, ritmo: 'ADC SIGNAL ONLY', ondaP: '—', subP: '', pr: '—', subPr: '', qrs: '—', subQrs: '', qtc: '—', subQtc: '', st: '—', subSt: ''};
     } else if (state.modoECG === 'custom') {
       mEcg = obtenerPerfilCustomECG();
     } else {
@@ -531,7 +518,7 @@ export function mountVitalMonitor(root, onSample) {
     el('val-bpm').style.color = mEcg.colorBpm;
     el('lbl-ritmo').textContent = (state.fuente === 'USB')
       ? `AD8232 USB • ${mEcg.ritmo}`
-      : `${mEcg.bpm} LPM • ${mEcg.ritmo}`;
+      : `${mEcg.bpm} BPM • ${mEcg.ritmo}`;
 
     el('val-p').textContent = mEcg.ondaP;
     el('sub-p').textContent = mEcg.subP;
@@ -546,11 +533,11 @@ export function mountVitalMonitor(root, onSample) {
 
     const boxSt = el('box-st');
     const subSt = el('sub-st');
-    if (mEcg.esAlerta && (mEcg.subSt.includes('SUPRADESNIVEL') || mEcg.subSt.includes('Supradesnivel'))) {
+    if (mEcg.esAlerta && (mEcg.subSt.includes('ST ELEVATION') || mEcg.subSt.includes('ST elevation'))) {
       boxSt.style.borderColor = '#ef4444';
       boxSt.style.background = 'rgba(239, 68, 68, 0.15)';
       subSt.style.color = '#fca5a5';
-    } else if (mEcg.esAlerta && mEcg.subSt.includes('INFRADESNIVEL')) {
+    } else if (mEcg.esAlerta && mEcg.subSt.includes('ST DEPRESSION')) {
       boxSt.style.borderColor = '#f59e0b';
       boxSt.style.background = 'rgba(245, 158, 11, 0.15)';
       subSt.style.color = '#fcd34d';
@@ -563,15 +550,15 @@ export function mountVitalMonitor(root, onSample) {
     const diagBox = el('diag-box');
     const badgeGlobal = el('badge-alerta-global');
     if (state.fuente === 'USB') {
-      el('diag-panel-title').textContent = 'Señal USB local';
-      el('diag-ecg-text').textContent = 'Muestras ADC del puerto serie; escala de amplitud normalizada. Sin interpretación clínica.';
-      badgeGlobal.textContent = 'USB LOCAL';
+      el('diag-panel-title').textContent = 'Local USB signal';
+      el('diag-ecg-text').textContent = 'Serial ADC samples with normalized amplitude.';
+      badgeGlobal.textContent = 'LOCAL USB';
       badgeGlobal.classList.remove('badge-critical');
       badgeGlobal.style.color = '#38bdf8';
       badgeGlobal.style.borderColor = '#38bdf8';
       return;
     }
-    el('diag-panel-title').textContent = 'Lectura educativa de señales';
+    el('diag-panel-title').textContent = 'Training signal interpretation';
     ['normal', 'stemi', 'fv', 'paro', 'custom'].forEach(m => {
       const btn = el(`ecg-btn-${m}`);
       btn.classList.toggle('btn-active', state.modoECG === m && m !== 'custom');
@@ -594,7 +581,7 @@ export function mountVitalMonitor(root, onSample) {
     oxBadge.style.background = oxInfo.bgBadge;
     oxBadge.style.borderColor = oxInfo.borderBadge;
     oxBadge.style.color = oxInfo.textColorBadge;
-    el('ox-action-box').textContent = 'Valor de práctica simulado.';
+    el('ox-action-box').textContent = 'Simulated training value.';
 
     ['sano', 'leve', 'moderada', 'grave'].forEach(cat => {
       const btn = el(`ox-btn-${cat}`);
@@ -621,7 +608,7 @@ export function mountVitalMonitor(root, onSample) {
       bRso.className = 'btn-nirs-mini';
       if (nirsInfo.catRso2 === c) bRso.classList.add(`active-${c}`);
     });
-    el('nirs-action-box').textContent = 'Valores de práctica simulados.';
+    el('nirs-action-box').textContent = 'Simulated training values.';
 
     // Actualizar Quimiosensores RONSS
     el('q-btn-basal').classList.toggle('btn-active', state.modoQuimio === 'basal');
@@ -658,13 +645,13 @@ export function mountVitalMonitor(root, onSample) {
     el('bar-mda').style.width = `${rData.pMda}%`;
     el('bar-mda').style.backgroundColor = rData.cMda;
 
-    el('diag-ecg-text').textContent = `Perfil ECG simulado: ${mEcg.ritmo} · ${mEcg.bpm} LPM mostrados.`;
-    el('diag-ox-text').textContent = `SpO₂ ${state.spo2}% · StO₂ ${state.sto2}% · rSO₂ ${state.rso2}% (simulados).`;
-    el('diag-quimio-text').textContent = `Perfil redox simulado: ${rData.etiqueta}.`;
+    el('diag-ecg-text').textContent = `Simulated ECG profile ${mEcg.ritmo} · ${mEcg.bpm} BPM displayed.`;
+    el('diag-ox-text').textContent = `SpO₂ ${state.spo2}% · StO₂ ${state.sto2}% · rSO₂ ${state.rso2}% (simulated).`;
+    el('diag-quimio-text').textContent = `Simulated redox profile ${rData.etiqueta}.`;
     const severity = Math.max(mEcg.severidad, oxInfo.severidad, nirsInfo.sevMaxNirs, rData.severidad);
     const color = ['#10b981', '#38bdf8', '#f59e0b', '#ef4444'][severity];
     diagBox.style.borderLeftColor = color;
-    badgeGlobal.textContent = ['PERFIL NOMINAL', 'VARIACIÓN LEVE', 'VARIACIÓN MODERADA', 'VARIACIÓN ALTA'][severity];
+    badgeGlobal.textContent = ['NOMINAL PROFILE', 'MILD VARIATION', 'MODERATE VARIATION', 'HIGH VARIATION'][severity];
     badgeGlobal.style.color = color;
     badgeGlobal.style.borderColor = color;
     badgeGlobal.classList.toggle('badge-critical', severity === 3);
@@ -867,7 +854,7 @@ export function mountVitalMonitor(root, onSample) {
     dibujarCuadricula();
 
     if (state.fuente === 'USB') {
-      if (lastUsbSample && time - lastUsbSample > 2500) el('usb-status-text').textContent = 'USB sin muestras recientes';
+      if (lastUsbSample && time - lastUsbSample > 2500) el('usb-status-text').textContent = 'No recent USB samples';
       while (state.usbBuffer.length > 0) {
         const raw = state.usbBuffer.shift();
         dataPoints.push(mapearMuestraUSB(raw));
@@ -916,7 +903,7 @@ export function mountVitalMonitor(root, onSample) {
   async function conectarArduinoUSB() {
     if (connecting || port || disposed) return;
     if (!navigator.serial) {
-      el('usb-status-text').textContent = 'Web Serial no disponible. Se requiere un navegador compatible y HTTPS.';
+      el('usb-status-text').textContent = 'Web Serial is unavailable. Use a supported browser over HTTPS or localhost.';
       return;
     }
     const ticket = ++serialTicket;
@@ -941,7 +928,7 @@ export function mountVitalMonitor(root, onSample) {
       el('btn-disconnect-usb').style.display = 'inline-block';
       el('monitor-pause').disabled = true;
       el('monitor-reset').disabled = true;
-      el('usb-status-text').textContent = `USB conectado (${baudRate} bps) · esperando muestras`;
+      el('usb-status-text').textContent = `USB connected (${baudRate} bps) · waiting for samples`;
       snapshotAfterControls();
       const decoder = new TextDecoder();
       const activeReader = selected.readable.getReader();
@@ -960,7 +947,7 @@ export function mountVitalMonitor(root, onSample) {
             const num = Number(match[0]);
             if (!Number.isFinite(num)) continue;
             if (!lastUsbSample || performance.now() - lastUsbSample > 2500) {
-              el('usb-status-text').textContent = `USB conectado (${baudRate} bps) · datos locales`;
+              el('usb-status-text').textContent = `USB connected (${baudRate} bps) · local data`;
             }
             lastUsbSample = performance.now();
             state.usbBuffer.push(num);
@@ -973,9 +960,9 @@ export function mountVitalMonitor(root, onSample) {
         activeReader.releaseLock();
         if (reader === activeReader) reader = undefined;
       }
-      if (ticket === serialTicket) problem = 'Puerto serie desconectado.';
+      if (ticket === serialTicket) problem = 'Serial port disconnected.';
     } catch (error) {
-      if (!disposed && ticket === serialTicket) problem = error?.name === 'NotFoundError' ? 'No se seleccionó ningún puerto.' : 'No se pudo abrir o leer el puerto USB.';
+      if (!disposed && ticket === serialTicket) problem = error?.name === 'NotFoundError' ? 'No port selected.' : 'Could not open or read the USB port.';
     } finally {
       if (connected) await selected.close().catch(() => {});
       if (port === selected) port = undefined;
@@ -999,7 +986,7 @@ export function mountVitalMonitor(root, onSample) {
   }
   function updatePause() {
     const button = el('monitor-pause');
-    button.textContent = paused ? 'Continuar' : 'Pausar';
+    button.textContent = paused ? 'Resume' : 'Pause';
     button.setAttribute('aria-pressed', String(paused));
     for (const control of root.querySelectorAll('#sync-bar select, #sim-ecg-buttons button, #custom-ecg-builder input, #custom-ecg-builder button, #right-sim-panel input, #right-sim-panel button')) {
       control.disabled = paused;

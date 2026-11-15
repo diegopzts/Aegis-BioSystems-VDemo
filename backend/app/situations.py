@@ -38,10 +38,10 @@ class Habitat(StrictModel):
 
 
 NARRATIVES = {
-    Situation.PANIC: "Anomalía detectada. Respire con calma. Inhala… exhala… Estoy aquí contigo; avisando a torre.",
-    Situation.LEAK: "Anomalía detectada. Respire con calma. Inhala… exhala… Avisando a torre. Iniciando protocolo simulado.",
-    Situation.ISOLATION: "Anomalía detectada. Respire con calma. Inhala… exhala… Estoy aquí para escucharte.",
-    Situation.MURPHY: "Anomalía detectada. Respire con calma. Inhala… exhala… Avisando a torre. Estabilizando hábitat simulado.",
+    Situation.PANIC: "Anomaly detected. Take a comfortable breath. Inhale, then exhale. I am here with you. Contacting simulated mission control.",
+    Situation.LEAK: "Anomaly detected. Breathe at a comfortable pace. Contacting simulated mission control and starting the training protocol.",
+    Situation.ISOLATION: "Anomaly detected. Take a comfortable breath. Inhale, then exhale. I am here to listen.",
+    Situation.MURPHY: "Anomaly detected. Breathe at a comfortable pace. Contacting simulated mission control and stabilizing the simulated habitat.",
 }
 
 
@@ -68,7 +68,7 @@ def orbital_telemetry(scenario: Situation) -> OrbitalTelemetry:
         distance_million_km=EARTH_MARS_KM / 1_000_000, one_way_seconds=seconds,
         one_way_label=f"{minutes} min {remainder:02d} s",
         link_status="normal" if nominal else "warning",
-        link_label="Enlace nominal" if nominal else "SIN RESPUESTA EN TIEMPO REAL",
+        link_label="Link nominal" if nominal else "NO REAL-TIME RESPONSE",
         autonomous_override=not nominal,
     )
 
@@ -123,13 +123,13 @@ class Activation(StrictModel):
 def build_snapshot(scenario: Situation, event_id: str, version: int) -> Snapshot:
     variants = {
         Situation.NOMINAL: ("Nominal", "standard", {}),
-        Situation.PANIC: ("Crisis de Pánico · Bio-Sync 6 RPM", "breathing_sync",
+        Situation.PANIC: ("Panic Episode · Bio-Sync 6 breaths per minute", "breathing_sync",
                           {"heart_rate_bpm": 148, "stress_proxy": 89, "breathing_guide": True, "ambience": "soft_wind"}),
-        Situation.LEAK: ("Fuga de O₂ · Zero-UI Supervivencia", "zero_ui",
+        Situation.LEAK: ("O₂ Leak · Zero-UI Survival", "zero_ui",
                          {"ambience": "soft_wind", "habitat": Habitat(oxygen_percent=16.4, co2_ppm=1850, pressure_kpa=84.5, reserve_minutes_demo=18)}),
-        Situation.ISOLATION: ("Aislamiento Extremo · Ancla de Tierra", "ground_anchor",
+        Situation.ISOLATION: ("Extreme Isolation · Ground Anchor", "ground_anchor",
                               {"mission_day": 142, "communication_delay_minutes": orbital_telemetry(scenario).one_way_seconds // 60, "emotional_fatigue_demo": True, "ambience": "warm_rain"}),
-        Situation.MURPHY: ("Mars Murphy’s Law · Crisis Total", "zero_ui",
+        Situation.MURPHY: ("Mars Murphy’s Law · Full Crisis", "zero_ui",
                           {"heart_rate_bpm": 162, "breathing_guide": True, "ambience": "dust_wind",
                            "habitat": Habitat(oxygen_percent=15.8, co2_ppm=2100, pressure_kpa=82, reserve_minutes_demo=12, dust_storm=True)}),
     }
@@ -180,11 +180,11 @@ class SituationStore:
         with self._lock:
             if event_id == self._value.event_id:
                 if self._value.scenario_id != scenario:
-                    raise ValueError("El identificador ya pertenece a otra situación.")
+                    raise ValueError("This identifier already belongs to another situation.")
                 return self._value
             if event_id in self._seen:
                 if self._seen[event_id] != scenario:
-                    raise ValueError("El identificador ya pertenece a otra situación.")
+                    raise ValueError("This identifier already belongs to another situation.")
                 return self._value
             self._seen[event_id] = scenario
             if len(self._seen) > 256:
@@ -211,7 +211,7 @@ class SituationStore:
         with self._lock:
             current = self._value
             if event_id != current.event_id or current.scenario_id == Situation.NOMINAL:
-                raise ValueError("La situación terminó o cambió.")
+                raise ValueError("The situation ended or changed.")
             habitat = current.habitat.model_dump()
             operations = {
                 "seal_habitat_sector": [(name, args.get("sector_id"))],
@@ -254,15 +254,15 @@ def active_situations(default: SituationStore) -> SituationStore:
 
 def prompt(snapshot: Snapshot) -> str:
     framing = {
-        Situation.PANIC: "Acompaña con calidez. Invita opcionalmente al pulso visual de 6 ciclos/min, respiración cómoda sin retener el aire.",
-        Situation.LEAK: "Como director de vuelo simulado, usa frases de hasta 8 palabras. Ejecuta sellado B, reserva high y luz 15%, paso a paso.",
-        Situation.ISOLATION: "Pregunta cómo se siente la persona, escucha y ofrece opciones. No asumas aislamiento real ni infieras emociones.",
-        Situation.MURPHY: "Primero di una frase breve y cálida. Después ejecuta estabilización sintética de Sector B, reserva high y luz 15%.",
+        Situation.PANIC: "Stay supportive. Offer the optional visual guide at six cycles per minute, with comfortable breathing and no breath holds.",
+        Situation.LEAK: "As simulated flight director, use sentences of up to eight words. Seal Sector B, set reserve to high, and dim lighting to 15%, step by step.",
+        Situation.ISOLATION: "Ask how the user feels, listen, and offer choices. Avoid assuming actual isolation or inferring emotions.",
+        Situation.MURPHY: "Start with a short warm sentence. Then stabilize simulated Sector B, set reserve to high, and dim lighting to 15%.",
     }
-    return ("Evento interno de simulación AEGIS. Inicia ahora una respuesta hablada sin esperar voz. "
-            "Abre con la narrativa exacta entre comillas, sin anunciar el botón ni decir nada antes. Usa voz cálida y pausada. Después, si mencionaste torre, aclara que es solo la torre simulada y que no se notificó a nadie. Sin diagnóstico ni hardware real. "
-            f"«{snapshot.narrative}» Escenario simulado; pulso={snapshot.heart_rate_bpm} bpm; O₂={snapshot.habitat.oxygen_percent}%; "
-            f"día narrativo={snapshot.mission_day}; retardo ficticio={snapshot.communication_delay_minutes} min. "
+    return ("Internal AEGIS simulation event. Begin speaking now without waiting for user audio. "
+            "Start with the exact quoted narrative. Use a warm voice and a steady pace. If you mention mission control, clarify that this is a simulation and nobody was notified. Avoid diagnoses and claims about real hardware. "
+            f"«{snapshot.narrative}» Simulated scenario, pulse={snapshot.heart_rate_bpm} bpm; O₂={snapshot.habitat.oxygen_percent}%; "
+            f"scenario day={snapshot.mission_day}; simulated delay={snapshot.communication_delay_minutes} min. "
             f"{framing[snapshot.scenario_id]}")
 
 

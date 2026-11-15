@@ -39,7 +39,7 @@ export function LiveVitalsMonitor() {
       } catch {
         if (!controller.signal.aborted) {
           status.dataset.sync = 'error'
-          status.textContent = 'El Companion no puede consultar el monitor. La señal sigue disponible aquí.'
+          status.textContent = 'The Companion cannot read the monitor. The signal is still available here.'
         }
       } finally {
         sending = false
@@ -58,5 +58,5 @@ export function LiveVitalsMonitor() {
       root.replaceChildren()
     }
   }, [])
-  return <div aria-label="Monitor biomédico en vivo" ref={element}/>
+  return <div aria-label="Live biomedical monitor" ref={element}/>
 }

@@ -7,24 +7,24 @@ import { useVoice, type VoiceState } from './voice'
 import { VoiceOrb } from './VoiceOrb'
 import type { InputGraph, Simulation } from './simulation'
 
-const greeting = '¿Cómo estás, cómo te sientes hoy?'
+const greeting = 'How are you feeling today?'
 const prompts = [
-  ['Hablar de cómo me siento', 'Quiero hablar un poco de cómo me siento.'],
-  ['Revisar mi descanso', '¿Qué muestran mis registros de sueño más recientes?'],
-  ['Ver tendencias de bienestar', '¿Cómo han variado mi energía y estrés durante los últimos 7 días?'],
-  ['Hacer una pausa breve', '¿Podemos hacer un ejercicio breve y opcional para hacer una pausa?'],
+  ['Talk about how I feel', 'I would like to talk about how I feel.'],
+  ['Review my sleep', 'What do my latest sleep records show?'],
+  ['View wellbeing trends', 'How have my energy and stress changed over the last seven days?'],
+  ['Take a short break', 'Can we do a short exercise to take a break?'],
 ]
 const voiceLabels = {
-  disconnected: 'Voz desconectada', connecting: 'Conectando…', listening: 'Escuchando',
-  responding: 'Generando voz…', receiving: 'Recibiendo audio…', playing: 'Reproduciendo voz',
-  suspended: 'Voz silenciada: audio pausado por el navegador', error: 'Error de voz',
-  'text-only': 'Solo transcripción: Gemini no envió audio', 'no-audio': 'Gemini terminó sin audio',
-  'audio-error': 'Error de voz: audio incompatible con esta versión',
+  disconnected: 'Voice disconnected', connecting: 'Connecting…', listening: 'Listening',
+  responding: 'Generating voice…', receiving: 'Receiving audio…', playing: 'Playing voice',
+  suspended: 'Voice paused by the browser', error: 'Voice error',
+  'text-only': 'Transcript only. Gemini sent no audio.', 'no-audio': 'Gemini finished without audio',
+  'audio-error': 'Voice error. Unsupported audio format.',
 }
 const operations: Record<string, string> = {
-  create_wellness_entry: 'Crear registro', update_wellness_entry: 'Editar registro', delete_wellness_entry: 'Quitar registro',
-  acknowledge_alert: 'Revisar alerta', set_mission_scenario: 'Cambiar escenario', advance_mission: 'Avanzar un día',
-  reset_mission: 'Reiniciar simulación', undo: 'Deshacer cambio',
+  create_wellness_entry: 'Create check-in', update_wellness_entry: 'Edit check-in', delete_wellness_entry: 'Remove check-in',
+  acknowledge_alert: 'Review alert', set_mission_scenario: 'Change scenario', advance_mission: 'Advance one day',
+  reset_mission: 'Reset simulation', undo: 'Undo change',
 }
 type Activity = {id: number; operation: string; target: string; date: string; result: string; undoable: boolean}
 export type CompanionVoiceStatus = {label: string; playing: boolean; graph?: InputGraph; state: VoiceState; output: number}
@@ -118,7 +118,7 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
       if (controller.signal.aborted && controller.signal.reason !== 'timeout') return
       setMessages(previous)
       setText(message)
-      setError(controller.signal.aborted ? 'Se agotó el tiempo de espera.' : error instanceof Error ? error.message : 'No pude comunicarme con Gemini.')
+      setError(controller.signal.aborted ? 'The request timed out.' : error instanceof Error ? error.message : 'Could not reach Gemini.')
     } finally {
       window.clearTimeout(timeout)
       if (requestController.current === controller) setPending(false)
@@ -129,7 +129,7 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
     onChange(change)
     setRevision(old => old + 1)
     const id = change.record.id
-    setResult(`Guardado · ${operations[change.operation] ?? 'Cambio aplicado'}${id ? ` · #${id}` : ''}`)
+    setResult(`Saved · ${operations[change.operation] ?? 'Change applied'}${id ? ` · #${id}` : ''}`)
   }
 
   async function undo(id: number) {
@@ -139,47 +139,47 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
     try {
       showChange(changeSchema.parse(await post<unknown>(`companion/activity/${id}/undo`, {})))
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'No se pudo deshacer el cambio.')
+      setError(error instanceof Error ? error.message : 'Could not undo the change.')
     } finally { setBusy(false) }
   }
 
-  return <aside hidden={!visible} className="companion panel" aria-label="AEGIS AI Companion" lang="es" onKeyDown={e => { if (e.key === 'Escape') close() }}>
+  return <aside hidden={!visible} className="companion panel" aria-label="AEGIS AI Companion" lang="en" onKeyDown={e => { if (e.key === 'Escape') close() }}>
     <header className="companion-header"><div className="section-icon"><Sparkles size={20}/></div>
-      <div><h2>AEGIS AI Companion</h2><p>Bienestar durante la misión · Google Gemini</p></div>
-      <button className="icon-button" onClick={close} aria-label="Cerrar asistente"><X size={18}/></button>
+      <div><h2>AEGIS AI Companion</h2><p>Wellbeing during the mission · Google Gemini</p></div>
+      <button className="icon-button" onClick={close} aria-label="Close assistant"><X size={18}/></button>
     </header>
     {visible && !orbital && <VoiceOrb graph={inputGraph} breathing={breathing} output={voice.outputLevel} state={voice.state}
       label={voiceLabels[voice.state]} alert={Boolean(simulation && simulation.scenario_id !== 'nominal')}/>}
     <div className="chat-log">
-      <p className="muted">AEGIS es una demostración con datos sintéticos y no sustituye el apoyo de profesionales de salud mental.</p>
-      <p className="muted">El Companion consulta los datos de AEGIS y puede hacer cambios que le pidas. Gemini procesa los mensajes y los datos consultados, incluidas observaciones de bienestar cuando aportan a tu pregunta.</p>
-      <details className="companion-details"><summary>Configurar check-ins</summary><CheckinSettings prompt={checkin}/></details>
-      <details className="companion-details"><summary>Actividad local</summary>
-        {activity.error && <button className="button" onClick={activity.retry}>Reintentar actividad</button>}
-        {!activity.data?.length && <p>Sin cambios registrados.</p>}
+      <p className="muted">AEGIS is an educational demo with synthetic data. For mental health support, consult a qualified professional.</p>
+      <p className="muted">The Companion can read AEGIS data and apply requested changes. Gemini processes messages and relevant data, including wellbeing notes when they are needed to answer.</p>
+      <details className="companion-details"><summary>Check-in settings</summary><CheckinSettings prompt={checkin}/></details>
+      <details className="companion-details"><summary>Local activity</summary>
+        {activity.error && <button className="button" onClick={activity.retry}>Retry activity</button>}
+        {!activity.data?.length && <p>No changes recorded.</p>}
         {activity.data?.map(item => <div key={item.id} className="activity-item">
-          <span>{operations[item.operation] ?? item.operation} · aplicado<br/><time dateTime={item.date}>{new Date(item.date).toLocaleString('es')}</time></span>
-          {item.undoable && <button className="button" disabled={busy} onClick={() => void undo(item.id)}>Deshacer</button>}
+          <span>{operations[item.operation] ?? item.operation} · applied<br/><time dateTime={item.date}>{new Date(item.date).toLocaleString('en-US')}</time></span>
+          {item.undoable && <button className="button" disabled={busy} onClick={() => void undo(item.id)}>Undo</button>}
         </div>)}
       </details>
-      {availability === 'unconfigured' && <p className="inline-warning">Gemini sin configurar. Puedes seguir usando los módulos y hacer check-ins manuales.</p>}
-      {availability === 'error' && <p className="inline-warning">No se pudo comprobar Gemini. Verifica la conexión con AEGIS.</p>}
-      {availability === 'checking' && <p className="muted">Comprobando Gemini…</p>}
-      {configured && !messages.length && <p className="muted">Gemini configurado. Envía un mensaje para probar la conexión.</p>}
+      {availability === 'unconfigured' && <p className="inline-warning">Gemini is not configured. Modules and manual check-ins are available.</p>}
+      {availability === 'error' && <p className="inline-warning">Could not check Gemini. Verify your connection to AEGIS.</p>}
+      {availability === 'checking' && <p className="muted">Checking Gemini…</p>}
+      {configured && !messages.length && <p className="muted">Gemini is configured. Send a message to test the connection.</p>}
       {!messages.length && <div className="chat-intro">
-        <h3>Bienvenido al Companion</h3><p>Podemos hablar un rato, revisar algo que te interese o hacer una pausa.</p>
+        <h3>Welcome to the Companion</h3><p>Talk, review your mission data, or take a break.</p>
         {prompts.map(([label, prompt]) => <button key={label} className="button" onClick={() => { setText(prompt); input.current?.focus() }}>{label}</button>)}
       </div>}
-      <div className="conversation" role="log" aria-label="Conversación">
-        {!greetingTranscribed && <div className="chat-message"><strong>Invitación de AEGIS</strong><p>{greeting}</p></div>}{messages.map((message, i) =>
-        <div key={i} className={`chat-message ${message.role}`}><strong>{message.role === 'user' ? 'Tú' : 'AEGIS'}</strong><p>{message.text}</p></div>)}</div>
-      {!!sources.length && <p className="muted">Fuentes consultadas: {sources.map(source => source.replace(/^get_/, '').replaceAll('_', ' ')).join(', ')}.</p>}
-      {!!voice.transcripts.length && <div className="conversation" aria-label="Transcripción de voz">
+      <div className="conversation" role="log" aria-label="Conversation">
+        {!greetingTranscribed && <div className="chat-message"><strong>AEGIS check-in</strong><p>{greeting}</p></div>}{messages.map((message, i) =>
+        <div key={i} className={`chat-message ${message.role}`}><strong>{message.role === 'user' ? 'You' : 'AEGIS'}</strong><p>{message.text}</p></div>)}</div>
+      {!!sources.length && <p className="muted">Sources: {sources.map(source => source.replace(/^get_/, '').replaceAll('_', ' ')).join(', ')}.</p>}
+      {!!voice.transcripts.length && <div className="conversation" aria-label="Voice transcript">
         {voice.transcripts.slice(-6).map(item => <div className={`chat-message ${item.role}`} key={item.id}>
-          <strong>{item.role === 'user' ? 'Tú · voz' : 'AEGIS · voz'}</strong><p>{item.text}</p>
+          <strong>{item.role === 'user' ? 'You · voice' : 'AEGIS · voice'}</strong><p>{item.text}</p>
         </div>)}
       </div>}
-      {(pending || busy || result) && <p className="muted" role="status">{busy ? 'Guardando…' : pending ? 'Respondiendo o consultando datos…' : result}</p>}
+      {(pending || busy || result) && <p className="muted" role="status">{busy ? 'Saving…' : pending ? 'Responding or retrieving data…' : result}</p>}
       {error && <p className="inline-warning" role="alert">{error}</p>}
       <div ref={end}/>
     </div>
@@ -187,24 +187,24 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
     <div className="voice-strip">
       <AudioLines size={18} className={speaking ? 'pulse' : ''}/><span role="status">{voiceLabels[voice.state]}</span>
       <button className="button" disabled={!configured || busy} onClick={speaking ? voice.stop : () => void voice.start({welcome: waitForWelcome})}>
-        {speaking ? <Square size={13}/> : <Mic size={14}/>} {speaking ? 'Detener voz' : voice.state === 'error' ? 'Reconectar' : 'Iniciar voz'}
+        {speaking ? <Square size={13}/> : <Mic size={14}/>} {speaking ? 'Stop voice' : voice.state === 'error' ? 'Reconnect' : 'Start voice'}
       </button>
     </div>
-    {voice.state === 'suspended' && <button className="button" onClick={() => void voice.resume()}>Reanudar audio</button>}
-    <details className="voice-diagnostics"><summary>Diagnóstico de audio</summary>
-      <span>{voice.diagnostics.received} fragmentos PCM aceptados · {voice.diagnostics.rejected} incompatibles · {voice.diagnostics.pendingMs} ms pendientes · {voice.diagnostics.droppedMs} ms descartados · {voice.diagnostics.reconnects} reconexiones · {voice.diagnostics.interruptions} interrupciones</span>
-      <span>{voice.diagnostics.rate || '—'} Hz PCM · {voice.diagnostics.played} reproducidos · {voice.diagnostics.underruns} vaciados de búfer · latencia de salida ≈ {voice.diagnostics.outputLatencyMs} ms · AudioContext: {voice.diagnostics.contextState} · WebSocket: {['conectando', 'abierto', 'cerrando', 'cerrado'][voice.diagnostics.socketState] ?? '—'}</span>
-      {voice.turnStatus && <p>Sesión {voice.turnStatus.session.slice(0, 8)} · turno {voice.turnStatus.turn} · narrativa {voice.turnStatus.narrative?.slice(0, 8) ?? '—'} · {voice.turnStatus.event}</p>}
+    {voice.state === 'suspended' && <button className="button" onClick={() => void voice.resume()}>Resume audio</button>}
+    <details className="voice-diagnostics"><summary>Audio diagnostics</summary>
+      <span>{voice.diagnostics.received} PCM chunks accepted · {voice.diagnostics.rejected} incompatible · {voice.diagnostics.pendingMs} ms queued · {voice.diagnostics.droppedMs} ms discarded · {voice.diagnostics.reconnects} reconnects · {voice.diagnostics.interruptions} interruptions</span>
+      <span>{voice.diagnostics.rate || '—'} Hz PCM · {voice.diagnostics.played} played · {voice.diagnostics.underruns} buffer underruns · output latency ≈ {voice.diagnostics.outputLatencyMs} ms · AudioContext: {voice.diagnostics.contextState} · WebSocket: {['connecting', 'open', 'closing', 'closed'][voice.diagnostics.socketState] ?? '—'}</span>
+      {voice.turnStatus && <p>Session {voice.turnStatus.session.slice(0, 8)} · turn {voice.turnStatus.turn} · narrative {voice.turnStatus.narrative?.slice(0, 8) ?? '—'} · {voice.turnStatus.event}</p>}
     </details>
     {voice.error && <p className="inline-warning" role="alert">{voice.error}</p>}
     <form className="chat-form" onSubmit={send}>
-      <textarea ref={input} aria-label="Mensaje para AEGIS" placeholder="Escribe a AEGIS…" rows={2} maxLength={2000} value={text}
+      <textarea ref={input} aria-label="Message to AEGIS" placeholder="Write to AEGIS…" rows={2} maxLength={2000} value={text}
         onChange={e => setText(e.target.value)} disabled={pending}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}/>
-      <button className="button primary" aria-label="Enviar mensaje" disabled={pending || busy || !text.trim() || !configured}><Send size={17}/></button>
+      <button className="button primary" aria-label="Send message" disabled={pending || busy || !text.trim() || !configured}><Send size={17}/></button>
     </form>
-    <div className="companion-foot"><p>Los mensajes quedan en memoria de esta pestaña. La voz comparte audio con Gemini durante la sesión.</p>
-      <button className="text-button" onClick={clear} disabled={busy}>Borrar conversación</button></div>
+    <div className="companion-foot"><p>Messages stay in this tab's memory. Voice audio goes to Gemini during the session.</p>
+      <button className="text-button" onClick={clear} disabled={busy}>Clear conversation</button></div>
   </aside>
 }
 

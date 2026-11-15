@@ -216,11 +216,11 @@ export function mountAnatomy(canvas: HTMLCanvasElement, report: (state: ModelSta
       if (operation.signal.aborted) return
       install(parsed)
       parsed = undefined
-      report(lost ? {status: 'error', layers: available, detail: 'Contexto WebGL perdido.'} : {status: 'ready', layers: available})
+      report(lost ? {status: 'error', layers: available, detail: 'WebGL context lost.'} : {status: 'ready', layers: available})
     } catch {
       if (!operation.signal.aborted) report({
         status: model ? 'ready' : 'error', layers: available,
-        detail: file ? 'No se pudo abrir el modelo. Usa un GLB o glTF autocontenido.' : 'No se pudo cargar el modelo anatómico.',
+        detail: file ? 'Could not open the model. Use a self-contained GLB or glTF.' : 'Could not load the anatomy model.',
       })
     } finally {
       if (parsed) disposeModel(parsed)
@@ -252,7 +252,7 @@ export function mountAnatomy(canvas: HTMLCanvasElement, report: (state: ModelSta
     event.preventDefault()
     lost = true
     cancelAnimationFrame(frame); frame = 0
-    report({status: 'error', layers: available, detail: 'Contexto WebGL perdido.'})
+    report({status: 'error', layers: available, detail: 'WebGL context lost.'})
   }
   function onRestored() {
     lost = false

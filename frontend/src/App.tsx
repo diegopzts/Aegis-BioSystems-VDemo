@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Activity, Box, ChevronDown, CircleHelp, FlaskConical, HeartHandshake, LayoutDashboard, Menu, Moon, ShieldPlus, Sparkles, X } from 'lucide-react'
+import { Activity, Box, ChevronDown, CircleHelp, FlaskConical, HeartHandshake, LayoutDashboard, Menu, Moon, ShieldPlus, Sparkles, UsersRound, Waves, X } from 'lucide-react'
 import { post, useResource } from './api'
 import { ScenarioBar } from './ScenarioBar'
 import { OrbitalSlot, useOrbitalUi } from './orbitalUi'
@@ -9,20 +9,24 @@ import { simulationSchema, type Simulation, type SituationId } from './simulatio
 import { Companion, type CompanionControls, type CompanionVoiceStatus } from './Companion'
 import { CheckinPrompt, loadPosition, saveLocal, useCheckinPrompt } from './checkinPrompt'
 import { ResourceStatus } from './components'
-import { dateLabel, positionSchema, scenarios, type Change, sectionLabels, sections, type Action, type Metric, type Mission, type Region, type Scenario, type Section, type Span, type View } from './contracts'
+import { dateLabel, orbitModules, positionSchema, scenarios, type Change, sectionLabels, sections, type Action, type CrewId, type Metric, type Mission, type Region, type RelaxCommand, type Scenario, type Section, type Span, type View } from './contracts'
 import { Overview } from './Overview'
 import { SleepPage } from './SleepPage'
 import { VitalsPage } from './VitalsPage'
 import { WellnessPage } from './WellnessPage'
 
 const BodyPage = lazy(() => import('./BodyPage').then(module => ({default: module.BodyPage})))
-const navIcons = {overview: LayoutDashboard, vitals: Activity, sleep: Moon, wellness: HeartHandshake, body: Box}
+const CrewPage = lazy(() => import('./CrewPage').then(module => ({default: module.CrewPage})))
+const RelaxPage = lazy(() => import('./RelaxPage').then(module => ({default: module.RelaxPage})))
+const navIcons = {overview: LayoutDashboard, vitals: Activity, sleep: Moon, wellness: HeartHandshake, body: Box, crew: UsersRound, relax: Waves}
 const subtitles: Record<Section, string> = {
   overview: 'Crew health and wellbeing across the Mars transit.',
   vitals: 'Explore the live training monitor and the separate simulated mission history.',
   sleep: 'Explore 30 mission nights, sleep timing and recovery patterns.',
   wellness: 'Track how you feel and make room for recovery.',
   body: 'Explore the anatomical model and view simulated mission telemetry separately.',
+  crew: 'Mission Crew Health & Status',
+  relax: 'Your Space to Reset, Recharge & Relax',
 }
 
 export function App() {
@@ -32,6 +36,10 @@ export function App() {
   const [orbitalFocused, setOrbitalFocused] = useState(false)
   const [orbitalSelection, setOrbitalSelection] = useState(0)
   const [section, setSection] = useState<Section>('overview')
+  const [crewId, setCrewId] = useState<CrewId>('AST-01')
+  const [relaxIntent, setRelaxIntent] = useState<{command: RelaxCommand; revision: number}>()
+  const relaxRevision = useRef(0)
+  const [relaxVolume, setRelaxVolume] = useState(.4)
   const [context, setContext] = useState(loadPosition)
   const {scenario, day} = context
   const [metric, setMetric] = useState<Metric>('heartRate')
@@ -51,7 +59,7 @@ export function App() {
   const [simulationError, setSimulationError] = useState('')
   const [breathingEvent, setBreathingEvent] = useState<string>()
   const [fullWorkspace, setFullWorkspace] = useState(false)
-  const [voiceStatus, setVoiceStatus] = useState<CompanionVoiceStatus>({label: 'Voz desconectada', playing: false, state: 'disconnected', output: 0})
+  const [voiceStatus, setVoiceStatus] = useState<CompanionVoiceStatus>({label: 'Voice disconnected', playing: false, state: 'disconnected', output: 0})
   const simulationLoad = useResource<unknown>('simulation')
   const mutation = useRef(false)
   const lastEvent = useRef('')
@@ -74,7 +82,7 @@ export function App() {
       const event_id = crypto.randomUUID()
       syncSimulation(simulationSchema.parse(await post(id === 'nominal' ? 'simulation/nominal/reset' : `simulation/${id}`, {event_id})))
     } catch {
-      setSimulationError('No se pudo confirmar el cambio. Intenta de nuevo cuando FastAPI esté disponible.')
+      setSimulationError('The change could not be confirmed. Try again when FastAPI is available.')
     } finally { mutation.current = false; setActivating(undefined) }
   }
   const companionTrigger = useRef<HTMLButtonElement>(null)
@@ -84,7 +92,15 @@ export function App() {
   const health = useResource<{status: string; geminiStatus: 'configured' | 'unconfigured'}>('health')
   const navigate = useCallback((next: Section) => {
     setOrbitalFocused(true)
+    setOrbitalSelection(orbitModules.indexOf(next))
+    if (next !== 'relax') setRelaxIntent(undefined)
     setSection(next)
+    setMobileNav(false)
+    window.scrollTo(0, 0)
+  }, [])
+  const returnToOrbit = useCallback(() => {
+    setOrbitalFocused(false)
+    setRelaxIntent(undefined)
     setMobileNav(false)
     window.scrollTo(0, 0)
   }, [])
@@ -98,9 +114,12 @@ export function App() {
         case 'navigate': navigate(action.section); break
         case 'chart': setMetric(action.metric); setSpan(action.range); navigate('vitals'); break
         case 'viewer': setRegion(action.region); setView(action.view); navigate('body'); break
+        case 'relax': navigate('relax'); setRelaxIntent({command: action.command, revision: ++relaxRevision.current}); break
+        case 'crew': setCrewId(action.crewId); navigate('crew'); break
+        case 'orbit': returnToOrbit(); break
       }
     }
-  }, [navigate, setView])
+  }, [navigate, returnToOrbit, setView])
   const current = mission.data
   function applyChange(change: Change) {
     if (change.refresh === 'mission') {
@@ -117,11 +136,6 @@ export function App() {
   }
   function openNight(day: number) { setNight(day); navigate('sleep') }
   function openMetric(value: Metric) { setMetric(value); navigate('vitals') }
-  function returnToOrbit() {
-    setOrbitalFocused(false)
-    setMobileNav(false)
-    window.scrollTo(0, 0)
-  }
   function startAssistant(retry = false) {
     openCompanion()
     companionControls.current?.startFromOrbit(() => welcome.play(retry))
@@ -129,6 +143,7 @@ export function App() {
   function openOrbitalModule(module: Section | 'companion') {
     if (module === 'companion') {
       setOrbitalFocused(true)
+      setMobileNav(false)
       openCompanion()
     } else navigate(module)
   }
@@ -164,11 +179,11 @@ export function App() {
         <button className="icon-button mobile-menu" aria-label="Open navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu size={20}/></button>
         <span className="topbar-title">AEGIS <span>BioSystems</span></span>
         <div className="topbar-right">
-          <select className="experience-select" aria-label="Experiencia visual" disabled={orbitalUi.urlClassic}
+          <select className="experience-select" aria-label="Visual experience" disabled={orbitalUi.urlClassic}
             value={orbitalUi.preferredClassic ? 'classic' : 'auto'}
             onChange={event => orbitalUi.setPreference(event.target.value === 'classic')}>
-            <option value="auto">Automática</option>
-            <option value="classic">Clásica</option>
+            <option value="auto">Automatic</option>
+            <option value="classic">Classic</option>
           </select>
           <span className={`system-state ${health.error ? 'irregular' : ''}`}><i/>{health.data ? 'System online' : health.error ? 'API offline' : 'Connecting'}</span>
           {current && <span className="day-chip">MD <strong>{String(current.day).padStart(2, '0')}</strong></span>}
@@ -187,7 +202,7 @@ export function App() {
           focused={orbitalFocused} selection={orbitalSelection} select={setOrbitalSelection} onMounted={setOrbitalMounted}
           open={openOrbitalModule} back={returnToOrbit} startAssistant={() => startAssistant()} retryWelcome={() => startAssistant(true)}
           welcome={welcome.status} voice={voiceStatus} breathing={breathing} alert={Boolean(simulation && simulation.scenario_id !== 'nominal')}/>
-        <ScenarioBar snapshot={simulation} busy={activating} error={simulationError || (simulationLoad.error ? 'No se pudo cargar el estado de simulación.' : '')}
+        <ScenarioBar snapshot={simulation} busy={activating} error={simulationError || (simulationLoad.error ? 'Could not load the simulation status.' : '')}
           activate={id => void activateSituation(id)} heartRate={current?.metrics.heartRate.value} playing={voiceStatus.playing}
           voiceStatus={voiceStatus.label} graph={voiceStatus.graph} onBreathing={setBreathingEvent} openVoice={openCompanion} useWorkspace={() => setFullWorkspace(current => !current)}/>
         <div className="mission-widgets" hidden={zero || (orbital && !orbitalFocused)}>
@@ -209,12 +224,18 @@ export function App() {
         {section === 'body' && (current ? <Suspense fallback={<ResourceStatus retry={() => {}}/>}>
           <BodyPage mission={current} region={region} view={view} revision={cameraRevision} setRegion={setRegion} setView={setView}/>
         </Suspense> : <ResourceStatus error={mission.error} retry={mission.retry}/>)}
+        {section === 'crew' && <Suspense fallback={<ResourceStatus retry={() => {}}/>}>
+          <CrewPage scenario={scenario} day={day} revision={simulation?.version ?? 0} selected={crewId} select={setCrewId}/>
+        </Suspense>}
+        {section === 'relax' && !zero && (!orbital || orbitalFocused) && <Suspense fallback={<ResourceStatus retry={() => {}}/>}>
+          <RelaxPage intent={relaxIntent} duck={voiceStatus.playing} volume={relaxVolume} setVolume={setRelaxVolume}/>
+        </Suspense>}
         <footer className="main-footer"><span>Beyond Monitoring. Towards Prevention.</span><span>Educational demo · Use qualified human support for medical decisions.</span></footer>
         </div>
       </main>
     </div>
     {(everOpened || orbitalUi.orbital) && <Companion ref={companionControls} orbital={orbital} waitForWelcome={welcome.wait}
-      visible={companion} breathing={breathing} simulation={simulation} onSimulation={syncSimulation} onVoiceStatus={setVoiceStatus} context={context} ui={{section, metric, range: span, region, view}} availability={health.error ? 'error' : health.data?.geminiStatus ?? 'checking'}
+      visible={companion} breathing={breathing} simulation={simulation} onSimulation={syncSimulation} onVoiceStatus={setVoiceStatus} context={context} ui={{section, metric, range: span, region, view, crewId}} availability={health.error ? 'error' : health.data?.geminiStatus ?? 'checking'}
       onActions={onActions} onChange={applyChange} close={closeCompanion} checkin={checkin}/>}
   </div>
 }

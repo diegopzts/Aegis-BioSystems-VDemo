@@ -31,7 +31,7 @@ class SyntheticSample(StrictModel):
         rates = {"normal": 77, "stemi": 98, "fv": 245, "paro": 0}
         if (self.profile == "custom" and not 30 <= self.ecgBpm <= 220
                 or self.profile != "custom" and self.ecgBpm != rates[self.profile]):
-            raise ValueError("La frecuencia no coincide con el perfil sintético.")
+            raise ValueError("The rate does not match the synthetic profile.")
         return self
 
 
@@ -44,7 +44,7 @@ class MonitorUpdate(StrictModel):
     @model_validator(mode="after")
     def synthetic_only(self):
         if (self.mode == "simulation") != (self.sample is not None):
-            raise ValueError("Solo se aceptan mediciones en modo sintético.")
+            raise ValueError("Only synthetic mode accepts measurements.")
         return self
 
 
@@ -87,7 +87,7 @@ class MonitorStore:
             return {
                 "status": "live_simulation", "ageSeconds": round(now - stamp, 1),
                 "sample": frame.sample.model_dump(),
-                "units": {"ecgBpm": "lpm (perfil ECG)", "spo2": "%", "sto2": "%", "rso2": "%",
+                "units": {"ecgBpm": "bpm (ECG profile)", "spo2": "%", "sto2": "%", "rso2": "%",
                           "h2o2": "µM", "o2": "nM", "onoo": "nM", "no": "nM", "gsh": "mM", "mda": "µM"},
                 "lastMinute": {"sampleCount": len(recent),
                                "coverageSeconds": round(recent[-1][0] - recent[0][0], 1) if recent else 0,

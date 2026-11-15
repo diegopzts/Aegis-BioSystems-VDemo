@@ -33,9 +33,9 @@ export function BreathingTrack({epoch, pausedAt}: {epoch: number; pausedAt: numb
     return () => cancelAnimationFrame(frame)
   }, [epoch, pausedAt, reduced])
   return <div className="breathing-track" ref={track}>
-    <strong>{reduced ? 'INHALA 5 s · EXHALA 5 s' : pausedAt !== null ? 'Guía en pausa' : inhale ? 'INHALA' : 'EXHALA'}</strong>
+    <strong>{reduced ? 'BREATHE IN 5 s · BREATHE OUT 5 s' : pausedAt !== null ? 'Guide paused' : inhale ? 'BREATHE IN' : 'BREATHE OUT'}</strong>
     <div className="breathing-line" aria-hidden="true"><span/></div>
-    <p>Sigue el ritmo solo si te resulta cómodo</p>
+    <p>Follow the rhythm at a comfortable pace</p>
   </div>
 }
 

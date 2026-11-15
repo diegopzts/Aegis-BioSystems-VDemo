@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-export const sections = ['overview', 'vitals', 'sleep', 'wellness', 'body'] as const
+export const sections = ['overview', 'vitals', 'sleep', 'wellness', 'body', 'crew', 'relax'] as const
+const crewIds = ['AST-01', 'AST-02', 'AST-03', 'AST-04', 'AST-05', 'AST-06'] as const
+export type CrewId = typeof crewIds[number]
+export const relaxCommands = ['start_breathing', 'play_ambient', 'pause_ambient', 'stop_ambient', 'open_memory', 'open_zen'] as const
+export type RelaxCommand = typeof relaxCommands[number]
+export const orbitModules = ['overview', 'vitals', 'sleep', 'wellness', 'body', 'companion', 'crew', 'relax'] as const
 export const metrics = ['heartRate', 'temperature', 'spo2', 'sleepHours'] as const
 export const spans = ['24h', '7d', '30d'] as const
 export const regions = ['full', 'head', 'chest', 'limbs'] as const
@@ -50,12 +55,15 @@ const action = z.discriminatedUnion('type', [
   z.strictObject({type: z.literal('navigate'), section: z.enum(sections)}),
   z.strictObject({type: z.literal('chart'), range: z.enum(spans), metric: z.enum(metrics)}),
   z.strictObject({type: z.literal('viewer'), region: z.enum(regions), view: z.enum(views)}),
+  z.strictObject({type: z.literal('relax'), command: z.enum(relaxCommands)}),
+  z.strictObject({type: z.literal('crew'), crewId: z.enum(crewIds)}),
+  z.strictObject({type: z.literal('orbit')}),
 ])
 export const actionList = z.array(action).max(8)
 export type Action = z.infer<typeof action>
 export const positionSchema = z.object({scenario: z.enum(['short_sleep', 'nominal', 'schedule_shift', 'stress', 'recovery']), day: z.number().int().min(1).max(30)})
 export type Position = z.infer<typeof positionSchema>
-export type WorkspaceView = {section: Section; metric: Metric; range: Span; region: Region; view: View}
+export type WorkspaceView = {section: Section; metric: Metric; range: Span; region: Region; view: View; crewId?: CrewId}
 export const changeSchema = z.object({
   operation: z.string(), record: z.record(z.string(), z.unknown()), refresh: z.enum(['mission', 'wellness', 'alerts']),
 })
@@ -77,6 +85,7 @@ export const sleepLabels: Record<SleepStatus | 'missing', string> = {
 export const sectionLabels: Record<Section, string> = {
   overview: 'Mission Overview', vitals: 'Vital Monitoring', sleep: 'Sleep Intelligence',
   wellness: 'Psychological Wellness', body: 'BioSystems 3D',
+  crew: 'Crew Management', relax: 'Relax Room',
 }
 export const regionLabels: Record<Region, string> = {full: 'Full body', head: 'Head', chest: 'Chest', limbs: 'Limbs'}
 

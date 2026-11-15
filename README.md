@@ -47,6 +47,10 @@ npm.cmd run dev
 
 Abre [AEGIS BioSystems](http://127.0.0.1:5173/). La [documentación interactiva de FastAPI](http://127.0.0.1:8005/docs) describe los endpoints. Si el puerto 5173 está ocupado, usa `npm.cmd run dev -- --port 5187` y abre [la vista alternativa](http://127.0.0.1:5187/). Si usas Gemini Live en ese puerto, añade `http://127.0.0.1:5187` a `CORS_ORIGINS` en `backend/.env` y reinicia FastAPI.
 
+### Orbital blue star
+
+The orbital view draws the star with one WebGL triangle. The fragment shader uses a projected sphere radius of 0.70, slow noise-domain drift for the plasma, and separate falloffs for the corona and prominences. The voice activity uniform controls only a small brightness accent. The canvas targets roughly 30 updates per second, caps its backing resolution at 384 pixels per side, and lowers that cap to 256 when frame intervals stay high. It stops drawing while the document is hidden and renders a still frame with reduced motion. A static CSS star appears when WebGL is unavailable or the context is lost. The Classic view is available through `?aegis-ui=classic`.
+
 ### BioSystems 3D
 
 Abre **BioSystems 3D** en la vista orbital o clásica. El visor de AstroSalud se integró como un componente nativo de AEGIS con la versión de Three.js que ya usa el proyecto. Conserva el GLB original, la cámara, las luces, la cuadrícula, el resaltado de regiones, la rotación, el zoom y el enfoque. La capa de soporte conserva el filtro por nombres del original, pero no equivale a un esqueleto completo. El archivo no incluye órganos internos, mapas de textura ni animaciones embebidas; las transiciones y la rotación son del visor.

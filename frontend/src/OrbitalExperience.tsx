@@ -1,20 +1,17 @@
 import { useEffect, useRef, type ComponentProps, type CSSProperties, type PointerEvent } from 'react'
-import { Activity, ArrowLeft, Box, ChevronLeft, ChevronRight, HeartHandshake, LayoutDashboard, Moon, Orbit, Sparkles } from 'lucide-react'
+import { Activity, ArrowLeft, Box, ChevronLeft, ChevronRight, HeartHandshake, LayoutDashboard, Moon, Orbit, Sparkles, UsersRound, Waves } from 'lucide-react'
 import { OrbitalMonitor } from './OrbitalMonitor'
 import { VoiceOrb } from './VoiceOrb'
 import { welcomeText } from './orbitalWelcome'
 import type { CompanionVoiceStatus } from './Companion'
-import type { Section } from './contracts'
+import {orbitModules, sectionLabels, type Section} from './contracts'
 import './orbital.css'
 
-const nodes = [
-  {id: 'overview', label: 'Misión', icon: LayoutDashboard},
-  {id: 'vitals', label: 'Signos vitales', icon: Activity},
-  {id: 'sleep', label: 'Sueño', icon: Moon},
-  {id: 'wellness', label: 'Bienestar', icon: HeartHandshake},
-  {id: 'body', label: 'BioSystems 3D', icon: Box},
-  {id: 'companion', label: 'Companion', icon: Sparkles},
-] as const
+const icons = {overview: LayoutDashboard, vitals: Activity, sleep: Moon, wellness: HeartHandshake,
+  body: Box, companion: Sparkles, crew: UsersRound, relax: Waves}
+const shortLabels = {overview: 'Mission', vitals: 'Vitals', sleep: 'Sleep', wellness: 'Wellness',
+  body: 'BioSystems 3D', companion: 'AI Companion', crew: 'Crew', relax: 'Relax Room'}
+const nodes = orbitModules.map(id => ({id, label: id === 'companion' ? 'AI Companion' : sectionLabels[id], icon: icons[id]}))
 
 type Props = ComponentProps<typeof OrbitalMonitor> & {
   focused: boolean; selection: number; select: (index: number) => void;
@@ -84,18 +81,18 @@ export default function OrbitalExperience({orbital, day, plannedDays, focused, s
   const busy = voice.state !== 'disconnected' && voice.state !== 'error'
   return <section className={`orbital-experience ${focused ? 'orbital-focus' : 'orbital-home'}`} aria-labelledby="orbital-experience-title">
     <header className="orbital-experience-header">
-      <h2 id="orbital-experience-title"><Orbit size={20} aria-hidden="true"/> Vista orbital</h2>
-      {focused ? <button className="button" type="button" onClick={back}><ArrowLeft size={16}/> Volver a Órbita</button>
-        : day !== undefined && <p>Día de misión <strong>{day}{plannedDays ? ` / ${plannedDays}` : ''}</strong></p>}
+      <h2 id="orbital-experience-title"><Orbit size={20} aria-hidden="true"/> Orbital view</h2>
+      {focused ? <button className="button" type="button" onClick={back}><ArrowLeft size={16}/> Return to Orbit</button>
+        : day !== undefined && <p>Mission day <strong>{day}{plannedDays ? ` / ${plannedDays}` : ''}</strong></p>}
     </header>
     {!focused && <div className="orbit-guide">
-      <button className="icon-button" type="button" aria-label="Módulo anterior" onClick={() => move(-1)}><ChevronLeft size={19}/></button>
+      <button className="icon-button" type="button" aria-label="Previous module" onClick={() => move(-1)}><ChevronLeft size={19}/></button>
       <div><p aria-live="polite">{nodes[selection].label} <small>{selection + 1} / {nodes.length}</small></p>
-        <small>Gira con la rueda, arrastra el cinturón o usa ← →.</small></div>
-      <button className="icon-button" type="button" aria-label="Módulo siguiente" onClick={() => move(1)}><ChevronRight size={19}/></button>
+        <small>Scroll, drag the orbit, or use the arrow keys.</small></div>
+      <button className="icon-button" type="button" aria-label="Next module" onClick={() => move(1)}><ChevronRight size={19}/></button>
     </div>}
     <div className="orbit-stage">
-      <div className="orbit-belt" ref={belt} hidden={focused} aria-label="Cinturón de módulos"
+      <div className="orbit-belt" ref={belt} hidden={focused} aria-label="Orbiting modules"
         onPointerDown={event => {
           if (event.button !== 0 || !event.isPrimary) return
           dragged.current = false
@@ -116,26 +113,27 @@ export default function OrbitalExperience({orbital, day, plannedDays, focused, s
         }}>
         <div className="orbit-trail" aria-hidden="true"/>
         {nodes.map(({id, label, icon: Icon}, index) => {
-          const angle = ((index - selection) * Math.PI * 2) / nodes.length
-          const position = {'--node-x': `${50 + Math.sin(angle) * 43}%`,
-            '--node-y': `${51 + Math.cos(angle) * 42}%`, '--node-depth': (Math.cos(angle) + 1) / 2} as CSSProperties
+          const angle = ((index - selection) * Math.PI * 2) / nodes.length + Math.PI / 8
+          const position = {'--node-x': `${50 + Math.sin(angle) * 40}%`,
+            '--node-y': `${49 + Math.cos(angle) * 43}%`,
+            '--node-mobile-y': `${43 + Math.cos(angle) * 36}%`,
+            '--node-depth': (Math.cos(angle) + 1) / 2} as CSSProperties
           return <button type="button" key={id} className="orbit-node" ref={element => { nodeButtons.current[index] = element }}
             style={position} tabIndex={selection === index ? 0 : -1} aria-current={selection === index ? 'true' : undefined}
-            onClick={() => { select(index); open(id) }}>
-            <Icon size={21} aria-hidden="true"/><span>{label}</span>
-            {id === 'companion' && <small>{voice.label}</small>}
+            aria-label={label} onClick={() => { select(index); open(id) }}>
+            <span className="orbit-moon" aria-hidden="true"><Icon size={20}/></span><span>{shortLabels[id]}</span>
           </button>
         })}
       </div>
       <div className="orbit-pilot">
         <VoiceOrb graph={voice.graph} label={voice.label} state={voice.state} output={voice.output}
-          breathing={breathing} alert={alert}/>
+          breathing={breathing} alert={alert} stellar/>
         <button className="orbit-assistant button primary" type="button" onClick={startAssistant}>
-          <Sparkles size={16} aria-hidden="true"/> {busy ? 'Abrir asistente' : 'Iniciar asistente'}
+          <Sparkles size={16} aria-hidden="true"/> {busy ? 'Open assistant' : 'Start assistant'}
         </button>
         {welcome !== 'idle' && <p className="orbit-welcome" role="status">{welcomeText}</p>}
-        {welcome === 'blocked' && !busy && <button className="button" type="button" onClick={retryWelcome}>Activar narración</button>}
-        {welcome === 'blocked' && busy && <small>Narración bloqueada. Detén la voz para reintentar.</small>}
+        {welcome === 'blocked' && !busy && <button className="button" type="button" onClick={retryWelcome}>Enable narration</button>}
+        {welcome === 'blocked' && busy && <small>Narration is blocked. Stop voice to retry.</small>}
       </div>
     </div>
     <OrbitalMonitor orbital={orbital} day={day} plannedDays={plannedDays}/>

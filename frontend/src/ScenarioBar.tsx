@@ -4,8 +4,8 @@ import { BreathingTrack } from './BreathingTrack'
 import { situationIds, type InputGraph, type Simulation, type SituationId } from './simulation'
 
 const labels: Record<SituationId, string> = {
-  panic_bio_sync: 'Crisis de Pánico', o2_leak_zero_ui: 'Fuga de O₂', extreme_isolation: 'Aislamiento Extremo',
-  mars_murphy: 'Mars Murphy’s Law', nominal: '↺ Restaurar Nominal',
+  panic_bio_sync: 'Panic Episode', o2_leak_zero_ui: 'O₂ Leak', extreme_isolation: 'Extreme Isolation',
+  mars_murphy: 'Mars Murphy’s Law', nominal: '↺ Restore Nominal',
 }
 
 function AcousticProxy({graph}: {graph?: InputGraph}) {
@@ -37,12 +37,12 @@ function AcousticProxy({graph}: {graph?: InputGraph}) {
     }
   }, [graph])
   return <div className="acoustic-proxy">
-    <strong>Actividad vocal estimada · no mide emociones ni estrés clínico</strong>
-    <p>Proxy acústico experimental calculado en este navegador.</p>
-    {graph ? <svg role="img" aria-label="Energía RMS de la señal local" viewBox="0 0 200 36" preserveAspectRatio="none">
+    <strong>Estimated voice activity · acoustic signal only</strong>
+    <p>This browser estimates local voice activity.</p>
+    {graph ? <svg role="img" aria-label="RMS energy of the local signal" viewBox="0 0 200 36" preserveAspectRatio="none">
       <polyline fill="none" stroke="currentColor" strokeWidth="2" points={series.map((value, index) =>
         `${index * 5},${34 - Math.min(1, value * 5) * 32}`).join(' ')}/></svg> :
-      <p>Disponible cuando inicias voz y autorizas el micrófono.</p>}
+      <p>Available after starting voice and allowing microphone access.</p>}
   </div>
 }
 
@@ -50,13 +50,13 @@ export function ScenarioBar({snapshot, busy, error, activate, heartRate, playing
   snapshot?: Simulation; busy?: SituationId; error: string; activate: (id: SituationId) => void;
   heartRate?: number; playing: boolean; voiceStatus: string; graph?: InputGraph; openVoice: () => void; useWorkspace: () => void; onBreathing?: (eventId?: string) => void
 }) {
-  return <section className="panel scenario-bar" aria-label="Simular Situación">
-    <strong>Simular Situación:</strong>
+  return <section className="panel scenario-bar" aria-label="Simulate a Situation">
+    <strong>Simulate a Situation:</strong>
     <div className="button-group">{situationIds.map(id =>
       <button type="button" className="button" key={id} disabled={Boolean(busy)}
         aria-pressed={snapshot?.scenario_id === id} onClick={() => activate(id)}>{labels[id]}</button>)}</div>
-    <p className="muted">Demo con datos sintéticos. No controla hardware ni ofrece diagnóstico médico</p>
-    <p role="status">{busy ? 'Activando situación…' : snapshot?.scenario_id === 'nominal' ? 'Situación nominal activa' : !snapshot ? 'Cargando situación…' : ''}</p>
+    <p className="muted">Educational simulation with synthetic data</p>
+    <p role="status">{busy ? 'Activating situation…' : snapshot?.scenario_id === 'nominal' ? 'Nominal situation active' : !snapshot ? 'Loading situation…' : ''}</p>
     {error && <p role="alert" className="inline-warning">{error}</p>}
     {snapshot && snapshot.scenario_id !== 'nominal' &&
       <ScenarioDetails key={snapshot.event_id} snapshot={snapshot} heartRate={heartRate} playing={playing}
@@ -89,35 +89,35 @@ function ScenarioDetails({snapshot, heartRate, playing, voiceStatus, graph, open
   const zero = snapshot.active_mode === 'zero_ui'
   return <div className="situation-details">
     <div className="situation-heading">
-      <div><small>Escenario de simulación</small><h2>{snapshot.scenario_name}</h2></div>
-      <span role="status">{snapshot.pending_live ? `Contexto pendiente · ${voiceStatus}` : voiceStatus}</span>
+      <div><small>Simulation scenario</small><h2>{snapshot.scenario_name}</h2></div>
+      <span role="status">{snapshot.pending_live ? `Context pending · ${voiceStatus}` : voiceStatus}</span>
     </div>
-    {snapshot.narrative && <blockquote className="scenario-narrative"><small>Narrativa de simulación</small><p>{snapshot.narrative}</p></blockquote>}
+    {snapshot.narrative && <blockquote className="scenario-narrative"><small>Simulation narrative</small><p>{snapshot.narrative}</p></blockquote>}
     {zero && <div className="zero-orb-wrap"><span className={`zero-orb ${playing ? 'speaking' : ''}`} aria-hidden="true"/>
-      <div className="button-group"><button className="button" onClick={openVoice}>Controles de voz</button>
-      <button className="button" onClick={useWorkspace}>Alternar vista de misión</button></div></div>}
+      <div className="button-group"><button className="button" onClick={openVoice}>Voice controls</button>
+      <button className="button" onClick={useWorkspace}>Toggle mission workspace</button></div></div>}
     <dl className="situation-metrics">
-      {zero && <div><dt>O₂ de cabina</dt><dd>{habitat.oxygen_percent} %</dd></div>}
-      {(zero || snapshot.heart_rate_bpm !== null) && <div><dt>Frecuencia cardiaca</dt><dd>{snapshot.heart_rate_bpm ?? heartRate ?? '—'} bpm</dd></div>}
-      {zero && <div><dt>Tiempo de reserva ficticio</dt><dd>{habitat.reserve_minutes_demo} min</dd></div>}
-      {snapshot.stress_proxy !== null && <div><dt>Estrés · proxy sintético</dt><dd>{snapshot.stress_proxy}/100</dd></div>}
-      {snapshot.mission_day !== null && <div><dt>Día narrativo</dt><dd>{snapshot.mission_day}</dd></div>}
-      {snapshot.communication_delay_minutes !== null && <div><dt>Retraso ficticio Tierra–Marte</dt><dd>{snapshot.communication_delay_minutes} min</dd></div>}
+      {zero && <div><dt>Cabin O₂</dt><dd>{habitat.oxygen_percent} %</dd></div>}
+      {(zero || snapshot.heart_rate_bpm !== null) && <div><dt>Heart rate</dt><dd>{snapshot.heart_rate_bpm ?? heartRate ?? '—'} bpm</dd></div>}
+      {zero && <div><dt>Simulated reserve time</dt><dd>{habitat.reserve_minutes_demo} min</dd></div>}
+      {snapshot.stress_proxy !== null && <div><dt>Stress · synthetic estimate</dt><dd>{snapshot.stress_proxy}/100</dd></div>}
+      {snapshot.mission_day !== null && <div><dt>Scenario day</dt><dd>{snapshot.mission_day}</dd></div>}
+      {snapshot.communication_delay_minutes !== null && <div><dt>Simulated Earth–Mars delay</dt><dd>{snapshot.communication_delay_minutes} min</dd></div>}
     </dl>
-    {snapshot.emotional_fatigue_demo && <p className="muted">La situación narrativa incluye fatiga emocional simulada.</p>}
-    {habitat.dust_storm && <p className="muted">Tormenta de polvo exterior simulada.</p>}
-    {snapshot.actions.length > 0 && <details><summary>Acciones de hábitat registradas ({snapshot.actions.length})</summary>
+    {snapshot.emotional_fatigue_demo && <p className="muted">This scenario includes simulated emotional fatigue.</p>}
+    {habitat.dust_storm && <p className="muted">Simulated dust storm outside the habitat.</p>}
+    {snapshot.actions.length > 0 && <details><summary>Recorded habitat actions ({snapshot.actions.length})</summary>
       <ul>{snapshot.actions.map((item, index) => <li key={index}>{item.replaceAll('_',' ')}</li>)}</ul></details>}
     {snapshot.breathing_guide && <div className="scenario-guide">
       {!hidden && <BreathingTrack epoch={epoch} pausedAt={guide ? null : pausedAt}/>}
       <div className="button-group">
-        {!hidden && <button className="button" onClick={toggleGuide}>{guide ? 'Pausar guía' : 'Reanudar guía'}</button>}
-        <button className="button" onClick={() => setHidden(!hidden)}>{hidden ? 'Mostrar guía' : 'Ocultar guía'}</button>
+        {!hidden && <button className="button" onClick={toggleGuide}>{guide ? 'Pause guide' : 'Resume guide'}</button>}
+        <button className="button" onClick={() => setHidden(!hidden)}>{hidden ? 'Show guide' : 'Hide guide'}</button>
       </div>
     </div>}
     <div className="button-group">
-      <button className="button" aria-pressed={ambient} onClick={() => setAmbient(!ambient)}>{ambient ? 'Silenciar ambiente' : 'Activar ambiente'}</button>
-      <label>Volumen <input aria-label="Volumen ambiental" type="range" min={0} max={1} step={.05} value={volume}
+      <button className="button" aria-pressed={ambient} onClick={() => setAmbient(!ambient)}>{ambient ? 'Mute ambience' : 'Enable ambience'}</button>
+      <label>Volume <input aria-label="Ambient volume" type="range" min={0} max={1} step={.05} value={volume}
         onChange={e => setVolume(Number(e.target.value))}/></label>
     </div>
     {ambientError && <p role="status">{ambientError}</p>}

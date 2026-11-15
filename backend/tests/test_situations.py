@@ -107,7 +107,7 @@ def test_pending_turn_is_injected_once_without_microphone(store):
         started = asyncio.Event()
         with pytest.raises(WebSocketDisconnect):
             await asyncio.wait_for(live.bridge(Socket(), Session(), Scenario.NOMINAL), 2)
-        assert len(sent) == 1 and "6 ciclos/min" in sent[0]
+        assert len(sent) == 1 and "six cycles per minute" in sent[0]
         assert [frame["snapshot"]["event_id"] for frame in snapshots] == ["new", "new"]
         assert not store.read().pending_live
 
@@ -115,15 +115,14 @@ def test_pending_turn_is_injected_once_without_microphone(store):
 
 
 
-@pytest.mark.parametrize(("scenario", "ending"), [
-    (Situation.PANIC, "Estoy aquí contigo; avisando a torre."),
-    (Situation.LEAK, "Avisando a torre. Iniciando protocolo simulado."),
-    (Situation.ISOLATION, "Estoy aquí para escucharte."),
-    (Situation.MURPHY, "Avisando a torre. Estabilizando hábitat simulado."),
+@pytest.mark.parametrize(("scenario", "expected"), [
+    (Situation.PANIC, "Anomaly detected. Take a comfortable breath. Inhale, then exhale. I am here with you. Contacting simulated mission control."),
+    (Situation.LEAK, "Anomaly detected. Breathe at a comfortable pace. Contacting simulated mission control and starting the training protocol."),
+    (Situation.ISOLATION, "Anomaly detected. Take a comfortable breath. Inhale, then exhale. I am here to listen."),
+    (Situation.MURPHY, "Anomaly detected. Breathe at a comfortable pace. Contacting simulated mission control and stabilizing the simulated habitat."),
 ])
-def test_scenario_narrative_is_shared_with_live(store, scenario, ending):
+def test_scenario_narrative_is_shared_with_live(store, scenario, expected):
     snapshot = store.activate(scenario, "narrative-test")
-    expected = "Anomalía detectada. Respire con calma. Inhala… exhala… " + ending
     assert snapshot.narrative == expected
     assert f"«{expected}»" in live.prompt(snapshot)
     assert store.activate(Situation.NOMINAL, "reset").narrative is None
@@ -177,7 +176,7 @@ def test_orbital_telemetry_is_consistent_across_situations_and_reset(store):
             response = api.post(f"/api/simulation/{scenario}", json={"event_id": scenario.value})
             assert response.status_code == 200
             assert response.json()["orbital"] == {**nominal, "link_status": "warning",
-                "link_label": "SIN RESPUESTA EN TIEMPO REAL", "autonomous_override": True}
+                "link_label": "NO REAL-TIME RESPONSE", "autonomous_override": True}
         assert api.post("/api/simulation/nominal/reset").json()["orbital"] == nominal
 
 

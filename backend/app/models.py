@@ -58,12 +58,17 @@ class ChatMessage(StrictModel):
     text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 
 
+Section = Literal["overview", "vitals", "sleep", "wellness", "body", "crew", "relax"]
+CrewId = Literal["AST-01", "AST-02", "AST-03", "AST-04", "AST-05", "AST-06"]
+
+
 class WorkspaceView(StrictModel):
-    section: Literal["overview", "vitals", "sleep", "wellness", "body"]
+    section: Section
     metric: Metric
     range: Span
     region: Literal["full", "head", "chest", "limbs"]
     view: Literal["front", "left", "right", "back"]
+    crewId: CrewId | None = None
 
 
 class ChatRequest(StrictModel):

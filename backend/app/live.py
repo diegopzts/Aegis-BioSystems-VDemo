@@ -15,7 +15,7 @@ from .companion_tools import TOOLS, declarations, dispatch
 from .models import Scenario, StrictModel, WorkspaceView
 from .situations import Situation, active_situations, prompt, situations
 
-GREETING = "¿Cómo estás, cómo te sientes hoy?"
+GREETING = "How are you feeling today?"
 GREETED: dict[str, float] = {}
 
 
@@ -34,7 +34,7 @@ def claim_greeting(session_id: str | None) -> bool:
 
 
 def greeting_instruction():
-    return f"Saluda en español con esta pregunta exacta, sin introducción: «{GREETING}»."
+    return f"Speak this exact greeting in English, with no introduction: «{GREETING}»."
 
 
 PCM_PARAM = re.compile(r'(rate|channels)\s*=\s*"?([0-9]{1,6})"?', re.I)
@@ -143,7 +143,7 @@ async def bridge(socket: WebSocket, session, scenario: Scenario, day: int = 30, 
                     continue
                 turn_event = snapshot.event_id
                 if changed_event and snapshot.scenario_id == Situation.NOMINAL and (snapshot.version > initial_version or not initial_nominal):
-                    notice = "La simulación anterior terminó. Continúa en modo nominal, sin acciones de hábitat ni anunciar la restauración."
+                    notice = "The previous simulation ended. Continue in nominal mode with no habitat actions or restoration announcement."
                     if "3.8-live" in model:
                         await session.send_client_content(
                             turns=types.Content(role="user", parts=[types.Part(text=notice)]), turn_complete=False,
@@ -156,7 +156,7 @@ async def bridge(socket: WebSocket, session, scenario: Scenario, day: int = 30, 
                     try:
                         text = prompt(snapshot)
                         if greet:
-                            text += f' Después de la narrativa inicial, pregunta una vez: «{GREETING}».'
+                            text += f' After the opening narrative, ask once: «{GREETING}».'
                         await socket.send_json({"type": "narrative_start", **turn_meta()})
                         if "3.8-live" in model:
                             await session.send_client_content(
@@ -211,7 +211,7 @@ async def bridge(socket: WebSocket, session, scenario: Scenario, day: int = 30, 
                                 continue
                             format = pcm_format(blob.mime_type or "")
                             if not format or len(blob.data) % 2 or len(blob.data) > 384000:
-                                raise CompanionError(502, "Gemini Live devolvió audio con un formato no compatible.")
+                                raise CompanionError(502, "Gemini Live returned an unsupported audio format.")
                             if format != audio_format:
                                 audio_format = format
                                 await socket.send_json({"type": "audio_format", "rate": format[0], "channels": format[1]})
@@ -250,7 +250,7 @@ async def bridge(socket: WebSocket, session, scenario: Scenario, day: int = 30, 
                         if habitat:
                             habitat_calls += 1
                         if turn_event != store.read().event_id or (habitat and habitat_calls > 5):
-                            result, action, change = {"error": "Turno anterior o límite de acciones simuladas."}, None, None
+                            result, action, change = {"error": "Turn expired or simulated action limit reached."}, None, None
                         else:
                             result, action, change = await asyncio.to_thread(
                                 dispatch, call.name, call.args or {}, context, ui.model_dump(mode="json") if ui else None,
@@ -317,7 +317,7 @@ async def live(socket: WebSocket, scenario: Scenario, day: int = 30, ui: Workspa
     except Exception as exc:
         reason = provider_reason(exc)
         retryable = isinstance(exc, ReconnectLive) or (not isinstance(exc, CompanionError) and reason in ("network", "timeout", "unavailable"))
-        message = "La sesión de voz se cerró. Reconectando…" if isinstance(exc, ReconnectLive) else str(
+        message = "The voice session closed. Reconnecting…" if isinstance(exc, ReconnectLive) else str(
             exc if isinstance(exc, CompanionError) else provider_error(exc))
         try:
             await socket.send_json({"type": "error", "message": message, "retryable": retryable})

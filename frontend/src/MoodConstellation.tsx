@@ -9,13 +9,13 @@ const ticks = [1, 2, 3, 4, 5, null]
 const x = (stress: number | null) => stress === null ? 502 : 66 + (stress - 1) * 92
 const y = (energy: number | null) => energy === null ? 221 : 178 - (energy - 1) * 36
 const EXIT_MS = 220
-const formatDate = (entry: StarEntry) => new Date(entry.recordedAt).toLocaleString('es')
-const score = (value: number | null) => value == null ? 'Sin dato' : `${value}/5`
+const formatDate = (entry: StarEntry) => new Date(entry.recordedAt).toLocaleString('en-US')
+const score = (value: number | null) => value == null ? 'No data' : `${value}/5`
 
 function EntryDetails({entry}: {entry: StarEntry}) {
   return <>
     <strong>ID {entry.id} · {moods[entry.mood - 1].label}</strong>
-    <p>{formatDate(entry)} · Estrés {score(entry.stress)} · Energía {score(entry.energy)}</p>
+    <p>{formatDate(entry)} · Stress {score(entry.stress)} · Energy {score(entry.energy)}</p>
     {entry.notes && <p className="constellation-note">{entry.notes}</p>}
   </>
 }
@@ -45,21 +45,21 @@ export function MoodConstellation({history}: {history: MoodEntry[]}) {
     return () => window.clearTimeout(timer)
   }, [entries, lastEntries])
 
-  return <section className="panel content-panel" aria-label="Constelación Emocional">
-    <SectionTitle icon={<Stars size={19}/>} title="Constelación Emocional"
-      subtitle="Autorregistros de bienestar · Escala de 1 a 5"/>
-    {!entries.length && <p className="muted">Aún no hay autorregistros para mostrar.</p>}
+  return <section className="panel content-panel" aria-label="Mood Constellation">
+    <SectionTitle icon={<Stars size={19}/>} title="Mood Constellation"
+      subtitle="Wellbeing check-ins · 1 to 5 scale"/>
+    {!entries.length && <p className="muted">No check-ins to display yet.</p>}
     {!!stars.length && <>
-      <ul className="mood-legend" aria-label="Colores de ánimo">{moods.map(mood =>
+      <ul className="mood-legend" aria-label="Mood colors">{moods.map(mood =>
         <li key={mood.label}><i style={{background: mood.color}}/>{mood.label}</li>)}</ul>
-      <svg className="constellation-plot" viewBox="0 0 570 280" aria-label="Estrés en el eje horizontal y energía en el eje vertical">
+      <svg className="constellation-plot" viewBox="0 0 570 280" aria-label="Stress on the horizontal axis and energy on the vertical axis">
         <g aria-hidden="true" className="constellation-grid">
           {ticks.map(tick => <g key={tick ?? 'missing'}>
             <line x1={x(tick)} y1={27} x2={x(tick)} y2={232}/><line x1={58} y1={y(tick)} x2={528} y2={y(tick)}/>
-            <text x={x(tick)} y={250} textAnchor="middle">{tick ?? 'Sin dato'}</text>
-            <text x={53} y={y(tick) + 4} textAnchor="end">{tick ?? 'Sin dato'}</text>
+            <text x={x(tick)} y={250} textAnchor="middle">{tick ?? 'No data'}</text>
+            <text x={53} y={y(tick) + 4} textAnchor="end">{tick ?? 'No data'}</text>
           </g>)}
-          <text x={58} y={16}>Energía</text><text x={294} y={272} textAnchor="middle">Estrés</text>
+          <text x={58} y={16}>Energy</text><text x={294} y={272} textAnchor="middle">Stress</text>
           <polyline className="constellation-line" points={entries.map(entry => `${x(entry.stress)},${y(entry.energy)}`).join(' ')}/>
         </g>
         {stars.map(entry => {
@@ -73,7 +73,7 @@ export function MoodConstellation({history}: {history: MoodEntry[]}) {
               '--star-glow': `${2 + entry.mood}px`} as CSSProperties}
             role={leaving ? undefined : 'button'} tabIndex={leaving ? undefined : 0} aria-hidden={leaving || undefined}
             aria-pressed={leaving ? undefined : selected === entry.id}
-            aria-label={`ID ${entry.id}, ${mood.label}, estrés ${score(entry.stress)}, energía ${score(entry.energy)}`}
+            aria-label={`ID ${entry.id}, ${mood.label}, stress ${score(entry.stress)}, energy ${score(entry.energy)}`}
             aria-describedby={activeTooltip?.id === entry.id ? tooltipId : undefined}
             onFocus={() => setFocused(entry.id)} onBlur={() => setFocused(undefined)}
             onMouseEnter={() => setHovered(entry.id)} onMouseLeave={() => setHovered(undefined)}
@@ -88,12 +88,12 @@ export function MoodConstellation({history}: {history: MoodEntry[]}) {
       </svg>
     </>}
     {activeTooltip && <div className="constellation-detail" role="tooltip" id={tooltipId}><EntryDetails entry={activeTooltip}/></div>}
-    {selectedEntry && <div className="constellation-detail" role="region" aria-label="Detalle del autorregistro">
+    {selectedEntry && <div className="constellation-detail" role="region" aria-label="Check-in details">
       <EntryDetails entry={selectedEntry}/>
     </div>}
-    {!!entries.length && <details className="constellation-list"><summary>Lista accesible de autorregistros</summary>
+    {!!entries.length && <details className="constellation-list"><summary>Accessible list of check-ins</summary>
       <ol>{entries.map(entry => <li key={entry.id}><EntryDetails entry={entry}/>
-        <button type="button" className="text-button" onClick={() => setSelected(entry.id)}>Ver detalle de ID {entry.id}</button></li>)}</ol>
+        <button type="button" className="text-button" onClick={() => setSelected(entry.id)}>View details for ID {entry.id}</button></li>)}</ol>
     </details>}
   </section>
 }

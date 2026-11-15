@@ -770,7 +770,7 @@
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
 </style>
-<div class="monitor" lang="es">
+<div class="monitor" lang="en">
 <!-- HEADER -->
   <header class="header">
     <div class="brand">
@@ -778,40 +778,40 @@
       <h2>AEGIS <span>// Crew Biomedical Telemetry</span></h2>
     </div>
     <div class="header-actions">
-      <button class="btn" id="monitor-pause" aria-pressed="false">Pausar</button>
-      <button class="btn" id="monitor-reset">Reiniciar simulación</button>
-      <select id="baud-rate-select" aria-label="Velocidad del puerto serie" title="Velocidad del puerto serie Arduino">
+      <button class="btn" id="monitor-pause" aria-pressed="false">Pause</button>
+      <button class="btn" id="monitor-reset">Reset simulation</button>
+      <select id="baud-rate-select" aria-label="Serial port baud rate" title="Arduino serial port baud rate">
         <option value="9600">9600 bps</option>
         <option value="115200" selected>115200 bps</option>
       </select>
-      <button class="btn btn-primary" id="btn-connect-usb" data-control-0>🔌 Conectar Arduino (USB)</button>
-      <button class="btn" id="btn-disconnect-usb" data-control-1 style="display:none;">Desconectar USB</button>
+      <button class="btn btn-primary" id="btn-connect-usb" data-control-0>🔌 Connect Arduino (USB)</button>
+      <button class="btn" id="btn-disconnect-usb" data-control-1 style="display:none;">Disconnect USB</button>
       <span id="usb-status-text" style="font-size:0.78rem; color:var(--text-secondary);">LIVE SIMULATION — SYNTHETIC DATA</span>
     </div>
   </header>
-  <p class="monitor-notice">Demostración educativa. El modo USB solo visualiza la señal local; no se comparte con el Companion ni se usa para diagnósticos.</p>
+  <p class="monitor-notice">Educational simulation. USB signals are displayed locally for observation only.</p>
   <p id="monitor-sync" class="monitor-notice" role="status"></p>
 
   <!-- BARRA DE CONTROL DE ACOPLAMIENTO BIDIRECCIONAL -->
   <div class="sync-bar" id="sync-bar">
     <div class="sync-group">
-      <span style="color:var(--accent-cyan); font-weight:700;">FUENTE DE DATOS:</span>
-      <span id="badge-fuente" class="badge-status">SIMULACIÓN ACTIVA</span>
+      <span style="color:var(--accent-cyan); font-weight:700;">DATA SOURCE:</span>
+      <span id="badge-fuente" class="badge-status">SIMULATION ACTIVE</span>
     </div>
 
     <div class="sync-group">
-      <label for="select-ecg-to-quimio">Al simular <b>ECG</b>, dejar Quimiosensores en:</label>
+      <label for="select-ecg-to-quimio">When simulating <b>ECG</b>, set chemical sensors to</label>
       <select id="select-ecg-to-quimio" data-control-2>
-        <option value="saludable">Estado Saludable (Basal)</option>
-        <option value="especifico">Radiación Acoplada (Estrés Oxidativo)</option>
+        <option value="saludable">Normal baseline</option>
+        <option value="especifico">Linked radiation and oxidative stress</option>
       </select>
     </div>
 
     <div class="sync-group">
-      <label for="select-quimio-to-ecg">Al simular <b>Quimiosensores</b>, dejar ECG en:</label>
+      <label for="select-quimio-to-ecg">When simulating <b>chemical sensors</b>, set ECG to</label>
       <select id="select-quimio-to-ecg" data-control-3>
-        <option value="normal">Configuración Normal (Perfil)</option>
-        <option value="simulada">Configuración Simulada (Estrés Cardíaco)</option>
+        <option value="normal">Normal profile</option>
+        <option value="simulada">Simulated cardiac stress</option>
       </select>
     </div>
   </div>
@@ -822,87 +822,87 @@
     <!-- COLUMNA IZQUIERDA: MONITOR ECG Y DIAGNÓSTICO -->
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">Electrocardiograma (Derivación II • AD8232)</span>
+        <span class="panel-title">Electrocardiogram (Lead II • AD8232)</span>
         <div id="sim-ecg-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-ecg btn-active" id="ecg-btn-normal" data-control-4>Normal</button>
-          <button class="btn btn-ecg btn-danger" id="ecg-btn-stemi" data-control-5>Infarto ST</button>
-          <button class="btn btn-ecg btn-danger" id="ecg-btn-fv" data-control-6>Fibrilación Vent.</button>
-          <button class="btn btn-ecg btn-danger" id="ecg-btn-paro" data-control-7>Paro Cardíaco</button>
-          <button class="btn btn-ecg btn-custom" id="ecg-btn-custom" data-control-8>🎛️ Personalizado</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-stemi" data-control-5>ST-Elevation Profile</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-fv" data-control-6>Ventricular Fibrillation</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-paro" data-control-7>Cardiac Arrest</button>
+          <button class="btn btn-ecg btn-custom" id="ecg-btn-custom" data-control-8>🎛️ Custom</button>
         </div>
       </div>
 
       <div class="ecg-container">
-        <canvas id="ecgCanvas" role="img" aria-label="Señal ECG en desplazamiento"></canvas>
+        <canvas id="ecgCanvas" role="img" aria-label="Scrolling ECG signal"></canvas>
         <div class="ecg-overlay-bpm">
           <div class="bpm-val" id="val-bpm">77</div>
-          <div class="bpm-label" id="lbl-ritmo">77 LPM • RITMO SINUSAL</div>
+          <div class="bpm-label" id="lbl-ritmo">77 BPM • SINUS RHYTHM</div>
         </div>
         <div class="usb-live-monitor" id="usb-live-monitor">
-          USB Raw: <span id="usb-raw-val">---</span> | Muestras/s: <span id="usb-rate-val">0</span> | Picos detectados: <span id="usb-beats-val">0</span>
+          USB Raw: <span id="usb-raw-val">---</span> | Samples/s: <span id="usb-rate-val">0</span> | Peaks detected: <span id="usb-beats-val">0</span>
         </div>
       </div>
 
       <!-- CREADOR CUSTOMIZABLE DE ONDA ECG (SLIDERS) -->
       <div class="custom-ecg-builder" id="custom-ecg-builder">
         <div class="custom-builder-header">
-          <span class="custom-builder-title">🎛️ Generador Paramétrico de Onda ECG (Personalizado)</span>
-          <button class="btn" style="padding:3px 9px; font-size:0.72rem;" data-control-9>↺ Restablecer Basal</button>
+          <span class="custom-builder-title">🎛️ Custom ECG Waveform</span>
+          <button class="btn" style="padding:3px 9px; font-size:0.72rem;" data-control-9>↺ Reset baseline</button>
         </div>
 
         <div class="custom-sliders-grid">
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Frecuencia (LPM)</span>
-              <span class="slider-val-badge" id="cust-lbl-bpm">75 LPM</span>
+              <span>Rate (BPM)</span>
+              <span class="slider-val-badge" id="cust-lbl-bpm">75 BPM</span>
             </div>
-            <input type="range" id="cust-slider-bpm" aria-label="Frecuencia ECG" min="30" max="220" step="1" value="75" data-control-10 />
-            <div class="slider-bounds"><span>30 (Bradi)</span><span>100</span><span>220 (Taqui)</span></div>
+            <input type="range" id="cust-slider-bpm" aria-label="ECG rate" min="30" max="220" step="1" value="75" data-control-10 />
+            <div class="slider-bounds"><span>30 (low)</span><span>100</span><span>220 (high)</span></div>
           </div>
 
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Segmento ST (mV)</span>
+              <span>ST segment (mV)</span>
               <span class="slider-val-badge" id="cust-lbl-st">+0.00 mV</span>
             </div>
-            <input type="range" id="cust-slider-st" aria-label="Segmento ST" min="-0.30" max="0.50" step="0.01" value="0.00" data-control-11 />
-            <div class="slider-bounds"><span>-0.30 (Infra)</span><span>0.00</span><span>+0.50 (Supra)</span></div>
+            <input type="range" id="cust-slider-st" aria-label="ST segment" min="-0.30" max="0.50" step="0.01" value="0.00" data-control-11 />
+            <div class="slider-bounds"><span>-0.30 (depression)</span><span>0.00</span><span>+0.50 (elevation)</span></div>
           </div>
 
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Onda P (mV)</span>
+              <span>P wave (mV)</span>
               <span class="slider-val-badge" id="cust-lbl-p">0.12 mV</span>
             </div>
-            <input type="range" id="cust-slider-p" aria-label="Amplitud P" min="0.00" max="0.30" step="0.01" value="0.12" data-control-12 />
-            <div class="slider-bounds"><span>0.00 (Ausente)</span><span>0.15</span><span>0.30 mV</span></div>
+            <input type="range" id="cust-slider-p" aria-label="P-wave amplitude" min="0.00" max="0.30" step="0.01" value="0.12" data-control-12 />
+            <div class="slider-bounds"><span>0.00 (absent)</span><span>0.15</span><span>0.30 mV</span></div>
           </div>
 
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Intervalo PR (ms)</span>
+              <span>PR interval (ms)</span>
               <span class="slider-val-badge" id="cust-lbl-pr">150 ms</span>
             </div>
-            <input type="range" id="cust-slider-pr" aria-label="Intervalo PR" min="80" max="300" step="5" value="150" data-control-13 />
-            <div class="slider-bounds"><span>80 (Corto)</span><span>160</span><span>300 (Bloqueo)</span></div>
+            <input type="range" id="cust-slider-pr" aria-label="PR interval" min="80" max="300" step="5" value="150" data-control-13 />
+            <div class="slider-bounds"><span>80 (short)</span><span>160</span><span>300 (block)</span></div>
           </div>
 
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Complejo QRS (ms)</span>
+              <span>QRS complex (ms)</span>
               <span class="slider-val-badge" id="cust-lbl-qrs">88 ms</span>
             </div>
-            <input type="range" id="cust-slider-qrs" aria-label="Duración QRS" min="60" max="180" step="2" value="88" data-control-14 />
-            <div class="slider-bounds"><span>60 ms</span><span>120</span><span>180 (Ancho)</span></div>
+            <input type="range" id="cust-slider-qrs" aria-label="QRS duration" min="60" max="180" step="2" value="88" data-control-14 />
+            <div class="slider-bounds"><span>60 ms</span><span>120</span><span>180 (wide)</span></div>
           </div>
 
           <div class="slider-control">
             <div class="slider-control-top">
-              <span>Onda T (mV)</span>
+              <span>T wave (mV)</span>
               <span class="slider-val-badge" id="cust-lbl-t">+0.22 mV</span>
             </div>
-            <input type="range" id="cust-slider-t" aria-label="Amplitud T" min="-0.40" max="0.60" step="0.02" value="0.22" data-control-15 />
-            <div class="slider-bounds"><span>-0.40 (Inv.)</span><span>+0.20</span><span>+0.60 (Picuda)</span></div>
+            <input type="range" id="cust-slider-t" aria-label="T-wave amplitude" min="-0.40" max="0.60" step="0.02" value="0.22" data-control-15 />
+            <div class="slider-bounds"><span>-0.40 (inverted)</span><span>+0.20</span><span>+0.60 (peaked)</span></div>
           </div>
         </div>
       </div>
@@ -910,49 +910,49 @@
       <!-- MÉTRICAS MORFOLÓGICAS -->
       <div class="metrics-row">
         <div class="metric-box" id="box-p">
-          <div class="m-label">Onda P</div>
-          <div class="m-val" id="val-p">Presente</div>
-          <div class="m-sub" id="sub-p">Sinusal (+)</div>
+          <div class="m-label">P wave</div>
+          <div class="m-val" id="val-p">Present</div>
+          <div class="m-sub" id="sub-p">Sinus (+)</div>
         </div>
         <div class="metric-box" id="box-pr">
-          <div class="m-label">Intervalo PR</div>
+          <div class="m-label">PR interval</div>
           <div class="m-val" id="val-pr">150 ms</div>
           <div class="m-sub" id="sub-pr">Normal (120-200)</div>
         </div>
         <div class="metric-box" id="box-qrs">
-          <div class="m-label">Complejo QRS</div>
+          <div class="m-label">QRS complex</div>
           <div class="m-val" id="val-qrs">88 ms</div>
-          <div class="m-sub" id="sub-qrs">Estrecho (&lt;120)</div>
+          <div class="m-sub" id="sub-qrs">Narrow (&lt;120)</div>
         </div>
         <div class="metric-box" id="box-qtc">
-          <div class="m-label">Intervalo QTc</div>
+          <div class="m-label">QTc interval</div>
           <div class="m-val" id="val-qtc">395 ms</div>
           <div class="m-sub" id="sub-qtc">Normal (&lt;440)</div>
         </div>
         <div class="metric-box" id="box-st">
-          <div class="m-label">Segmento ST</div>
+          <div class="m-label">ST segment</div>
           <div class="m-val" id="val-st">+0.01 mV</div>
-          <div class="m-sub" id="sub-st">Isoeléctrico</div>
+          <div class="m-sub" id="sub-st">Isoelectric</div>
         </div>
       </div>
 
       <!-- DIAGNÓSTICO AUTÓNOMO INTEGRADO -->
       <div class="panel-header" style="margin-top:4px;">
-        <span class="panel-title" id="diag-panel-title">Lectura educativa de señales</span>
-        <span class="badge-status" id="badge-alerta-global">ESTADO NOMINAL</span>
+        <span class="panel-title" id="diag-panel-title">Training signal interpretation</span>
+        <span class="badge-status" id="badge-alerta-global">NOMINAL STATUS</span>
       </div>
 
       <div class="diag-box" id="diag-box">
         <div class="diag-section">
-          <div class="diag-title">1. Electrofisiología Cardíaca:</div>
+          <div class="diag-title">1. Cardiac electrophysiology:</div>
           <div id="diag-ecg-text">—</div>
         </div>
         <div class="diag-section" id="diag-section-ox">
-          <div class="diag-title">2. Oximetría Dual — Arterial (SpO₂) + Tisular/Cerebral NIRS (StO₂ / rSO₂):</div>
+          <div class="diag-title">2. Arterial pulse oximetry (SpO₂) and tissue NIRS (StO₂ / rSO₂):</div>
           <div id="diag-ox-text">—</div>
         </div>
         <div class="diag-section" id="diag-section-quimio">
-          <div class="diag-title">3. Estado Redox / Quimiosensores (RONSS):</div>
+          <div class="diag-title">3. Redox status and chemical sensors (RONSS):</div>
           <div id="diag-quimio-text">—</div>
         </div>
 
@@ -964,8 +964,8 @@
 
       <!-- MÓDULO 1: OXÍMETRO DE PULSO ARTERIAL (SpO2) -->
       <div class="panel-header">
-        <span class="panel-title">Oxímetro de Pulso (SpO₂ • Arterial)</span>
-        <span style="font-size:0.72rem; color:var(--text-secondary);">Macrocirculación Pulsátil</span>
+        <span class="panel-title">Pulse oximeter (arterial SpO₂)</span>
+        <span style="font-size:0.72rem; color:var(--text-secondary);">Pulsatile circulation</span>
       </div>
 
       <div class="oximeter-card" id="oximeter-card">
@@ -974,14 +974,14 @@
             <span class="ox-big-val" id="val-spo2">98%</span>
             <span style="font-size:0.75rem; color:var(--text-secondary);">SpO₂</span>
           </div>
-          <span class="ox-badge" id="ox-status-badge">SANO (95–100%)</span>
+          <span class="ox-badge" id="ox-status-badge">NORMAL (95–100%)</span>
         </div>
 
         <div class="ox-presets">
-          <button class="btn-ox active-sano" id="ox-btn-sano" data-control-16>95–100%<br>Sano</button>
-          <button class="btn-ox" id="ox-btn-leve" data-control-17>90–94%<br>Hipoxia Leve</button>
-          <button class="btn-ox" id="ox-btn-moderada" data-control-18>85–89%<br>Hipoxia Mod.</button>
-          <button class="btn-ox" id="ox-btn-grave" data-control-19>≤ 84%<br>Hipoxemia Grave</button>
+          <button class="btn-ox active-sano" id="ox-btn-sano" data-control-16>95–100%<br>Normal</button>
+          <button class="btn-ox" id="ox-btn-leve" data-control-17>90–94%<br>Mild hypoxia</button>
+          <button class="btn-ox" id="ox-btn-moderada" data-control-18>85–89%<br>Moderate hypoxia</button>
+          <button class="btn-ox" id="ox-btn-grave" data-control-19>≤ 84%<br>Severe hypoxemia</button>
         </div>
 
         <div class="ox-slider-row">
@@ -991,14 +991,14 @@
         </div>
 
         <div class="ox-action-box" id="ox-action-box">
-          <b style="color:#10b981;">Estado Sano:</b> Saturación arterial normal. Sin necesidad de estudios adicionales ni oxígeno suplementario.
+          Simulated training value.
         </div>
       </div>
 
       <!-- MÓDULO 2: OXIMETRÍA TISULAR Y CEREBRAL NIRS (700–1100 nm • SCHEEREN ET AL., 2012) -->
       <div class="panel-header" style="margin-top:2px;">
-        <span class="panel-title">Oximetría Tisular NIRS (700–1100 nm)</span>
-        <span style="font-size:0.72rem; color:var(--accent-cyan);">Perfusión Microvascular</span>
+        <span class="panel-title">NIRS tissue oximetry (700–1100 nm)</span>
+        <span style="font-size:0.72rem; color:var(--accent-cyan);">Microvascular perfusion</span>
       </div>
 
       <div class="nirs-card" id="nirs-card">
@@ -1007,8 +1007,8 @@
           <div class="nirs-channel">
             <div class="nirs-channel-top">
               <div>
-                <div class="nirs-channel-title">StO₂ Periférica</div>
-                <div class="nirs-channel-site">Antebrazo (Rango: 75–90%)</div>
+                <div class="nirs-channel-title">Peripheral StO₂</div>
+                <div class="nirs-channel-site">Forearm (Range: 75–90%)</div>
               </div>
               <span class="nirs-channel-val" id="val-sto2">84%</span>
             </div>
@@ -1019,7 +1019,7 @@
             </div>
             <div class="nirs-mini-presets">
               <button class="btn-nirs-mini active-ok" id="sto2-btn-ok" data-control-22>Nominal<br>75–90%</button>
-              <button class="btn-nirs-mini" id="sto2-btn-warn" data-control-23>Alerta<br>&lt; 75%</button>
+              <button class="btn-nirs-mini" id="sto2-btn-warn" data-control-23>Alert<br>&lt; 75%</button>
               <button class="btn-nirs-mini" id="sto2-btn-crit" data-control-24>Shock<br>≤ 50%</button>
             </div>
           </div>
@@ -1029,7 +1029,7 @@
             <div class="nirs-channel-top">
               <div>
                 <div class="nirs-channel-title">rSO₂ Cerebral</div>
-                <div class="nirs-channel-site">Frontal (Rango: 55–80%)</div>
+                <div class="nirs-channel-site">Frontal (Range: 55–80%)</div>
               </div>
               <span class="nirs-channel-val" id="val-rso2">68%</span>
             </div>
@@ -1040,90 +1040,90 @@
             </div>
             <div class="nirs-mini-presets">
               <button class="btn-nirs-mini active-ok" id="rso2-btn-ok" data-control-26>Nominal<br>55–80%</button>
-              <button class="btn-nirs-mini" id="rso2-btn-warn" data-control-27>Baja<br>&lt; 50%</button>
-              <button class="btn-nirs-mini" id="rso2-btn-crit" data-control-28>Crítica<br>&lt; 45%</button>
+              <button class="btn-nirs-mini" id="rso2-btn-warn" data-control-27>Low<br>&lt; 50%</button>
+              <button class="btn-nirs-mini" id="rso2-btn-crit" data-control-28>Critical<br>&lt; 45%</button>
             </div>
           </div>
         </div>
 
         <div class="ox-action-box" id="nirs-action-box">
-          <b style="color:#10b981;">Perfusión Tisular Nominal:</b> Entrega y consumo de O₂ equilibrados en músculo periférico (StO₂ ≥ 75%) y corteza frontal (rSO₂ ≥ 55%).
+          Simulated training values.
         </div>
       </div>
 
       <!-- MÓDULO 3: QUIMIOSENSORES RONSS -->
       <div class="panel-header" style="margin-top:2px;">
-        <span class="panel-title">Quimiosensores RONSS (Radiación / Redox)</span>
+        <span class="panel-title">RONSS chemical sensors (radiation and redox)</span>
         <div style="display:flex; gap:6px;">
-          <button class="btn btn-quimio btn-active" id="q-btn-basal" data-control-29>Basal</button>
-          <button class="btn btn-quimio" id="q-btn-radiacion" data-control-30>Radiación</button>
+          <button class="btn btn-quimio btn-active" id="q-btn-basal" data-control-29>Baseline</button>
+          <button class="btn btn-quimio" id="q-btn-radiacion" data-control-30>Radiation</button>
         </div>
       </div>
 
       <div>
         <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:5px; font-weight:600;">
-          Nivel de Exposición / Severidad de Radiación:
+          Radiation exposure level
         </div>
         <div class="rad-levels-bar">
-          <button class="btn-nivel active-saludable" id="lvl-saludable" data-control-31>Saludable</button>
-          <button class="btn-nivel" id="lvl-ligero" data-control-32>Ligero</button>
-          <button class="btn-nivel" id="lvl-preocupante" data-control-33>Preocupante</button>
-          <button class="btn-nivel" id="lvl-peligro" data-control-34>Peligro</button>
+          <button class="btn-nivel active-saludable" id="lvl-saludable" data-control-31>Normal</button>
+          <button class="btn-nivel" id="lvl-ligero" data-control-32>Mild</button>
+          <button class="btn-nivel" id="lvl-preocupante" data-control-33>Moderate</button>
+          <button class="btn-nivel" id="lvl-peligro" data-control-34>High</button>
         </div>
       </div>
 
       <div class="ronss-grid">
         <div class="sensor-card">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#38bdf8;">Peróxido (H₂O₂)</span>
+            <span class="sensor-name" style="color:#38bdf8;">Peroxide (H₂O₂)</span>
             <span class="sensor-val" id="val-h2o2">1.20 µM</span>
           </div>
-          <div class="sensor-range">Saludable: 0.5 – 2.5 µM</div>
+          <div class="sensor-range">Training range  0.5 – 2.5 µM</div>
           <div class="progress-track"><div class="progress-fill" id="bar-h2o2" style="width:15%; background:#10b981;"></div></div>
         </div>
 
         <div class="sensor-card">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#f59e0b;">Superóxido (O₂•⁻)</span>
+            <span class="sensor-name" style="color:#f59e0b;">Superoxide (O₂•⁻)</span>
             <span class="sensor-val" id="val-o2">0.15 nM</span>
           </div>
-          <div class="sensor-range">Saludable: 0.05 – 0.30 nM</div>
+          <div class="sensor-range">Training range  0.05 – 0.30 nM</div>
           <div class="progress-track"><div class="progress-fill" id="bar-o2" style="width:18%; background:#10b981;"></div></div>
         </div>
 
         <div class="sensor-card">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#ec4899;">Peroxinitrito (ONOO⁻)</span>
+            <span class="sensor-name" style="color:#ec4899;">Peroxynitrite (ONOO⁻)</span>
             <span class="sensor-val" id="val-onoo">12 nM</span>
           </div>
-          <div class="sensor-range">Saludable: 5 – 25 nM</div>
+          <div class="sensor-range">Training range  5 – 25 nM</div>
           <div class="progress-track"><div class="progress-fill" id="bar-onoo" style="width:14%; background:#10b981;"></div></div>
         </div>
 
         <div class="sensor-card">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#a855f7;">Óxido Nítrico (NO•)</span>
+            <span class="sensor-name" style="color:#a855f7;">Nitric oxide (NO•)</span>
             <span class="sensor-val" id="val-no">35 nM</span>
           </div>
-          <div class="sensor-range">Saludable: 20 – 60 nM</div>
+          <div class="sensor-range">Training range  20 – 60 nM</div>
           <div class="progress-track"><div class="progress-fill" id="bar-no" style="width:35%; background:#10b981;"></div></div>
         </div>
 
         <div class="sensor-card" style="grid-column: span 2;">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#10b981;">Glutatión Reducido (GSH — Defensa Antioxidante)</span>
+            <span class="sensor-name" style="color:#10b981;">Reduced glutathione (GSH)</span>
             <span class="sensor-val" id="val-gsh">4.80 mM</span>
           </div>
-          <div class="sensor-range">Saludable: 3.5 – 6.0 mM (Peligro &lt; 2.0 mM)</div>
+          <div class="sensor-range">Training range  3.5 – 6.0 mM (high concern &lt; 2.0 mM)</div>
           <div class="progress-track"><div class="progress-fill" id="bar-gsh" style="width:80%; background:#10b981;"></div></div>
         </div>
 
         <div class="sensor-card" style="grid-column: span 2;">
           <div class="sensor-top">
-            <span class="sensor-name" style="color:#eab308;">Malondialdehído (MDA — Peroxidación Lipídica)</span>
+            <span class="sensor-name" style="color:#eab308;">Malondialdehyde (MDA)</span>
             <span class="sensor-val" id="val-mda">0.85 µM</span>
           </div>
-          <div class="sensor-range">Saludable: 0.4 – 1.2 µM</div>
+          <div class="sensor-range">Training range  0.4 – 1.2 µM</div>
           <div class="progress-track"><div class="progress-fill" id="bar-mda" style="width:20%; background:#10b981;"></div></div>
         </div>
       </div>

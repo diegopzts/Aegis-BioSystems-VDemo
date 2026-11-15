@@ -47,10 +47,10 @@ export function WellnessPage({scenario, day, revision, onSave}: {scenario: Scena
     try {
       await post<MoodEntry>(`wellness/checkin?scenario=${scenario}&day=${day}`, form)
       setForm(initial)
-      setSaveStatus('Autorregistro guardado.')
+      setSaveStatus('Check-in saved.')
       onSave()
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el autorregistro.')
+      setSaveError(error instanceof Error ? error.message : 'Could not save the check-in.')
     } finally {
       submitting.current = false
       setSaving(false)
@@ -59,9 +59,9 @@ export function WellnessPage({scenario, day, revision, onSave}: {scenario: Scena
   return <>
     <div className="split-grid wellness-grid">
       <section className="panel content-panel">
-        <SectionTitle icon={<NotebookPen size={19}/>} title="¿Cómo te sientes hoy?" subtitle="Elige una opción y añade una nota si te apetece."/>
+        <SectionTitle icon={<NotebookPen size={19}/>} title="How are you feeling today?" subtitle="Choose a mood and add an optional note."/>
         <form onSubmit={submit} className="checkin">
-          <fieldset disabled={saving}><legend>Estado de ánimo</legend>
+          <fieldset disabled={saving}><legend>Mood</legend>
             <div className="mood-bubbles">{moods.map(({label, icon: Icon, color}, index) => {
               const value = index + 1
               return <label key={label} style={{color}}>
@@ -71,20 +71,20 @@ export function WellnessPage({scenario, day, revision, onSave}: {scenario: Scena
               </label>
             })}</div>
           </fieldset>
-          <details className="mood-extras"><summary>Energía, estrés y nota (opcionales)</summary>
+          <details className="mood-extras"><summary>Energy, stress, and notes (optional)</summary>
             <div className="mood-options">{(['energy', 'stress'] as const).map(key =>
-              <label key={key}>{key === 'energy' ? 'Energía' : 'Estrés'}
+              <label key={key}>{key === 'energy' ? 'Energy' : 'Stress'}
                 <select value={form[key] ?? ''} disabled={saving}
                   onChange={event => setForm({...form, [key]: event.target.value ? Number(event.target.value) : null})}>
-                  <option value="">Sin registrar</option>{[1,2,3,4,5].map(value => <option key={value}>{value}</option>)}
+                  <option value="">Not recorded</option>{[1,2,3,4,5].map(value => <option key={value}>{value}</option>)}
                 </select>
               </label>)}</div>
-            <label htmlFor="reflection">Nota personal</label>
+            <label htmlFor="reflection">Personal note</label>
             <textarea id="reflection" maxLength={600} value={form.notes} disabled={saving}
               onChange={event => setForm({...form, notes: event.target.value})}/>
           </details>
-          <p className="muted">Usa datos ficticios. En la demo pública, los registros se pueden perder al reiniciar el servicio.</p>
-          <button className="button primary" disabled={saving || form.mood === null}>{saving ? 'Guardando…' : 'Guardar estado de ánimo'}</button>
+          <p className="muted">Use fictional data. A service restart can clear demo records.</p>
+          <button className="button primary" disabled={saving || form.mood === null}>{saving ? 'Saving…' : 'Save mood'}</button>
           <p role="status">{saveStatus}</p>
           {saveError && <p role="alert" className="inline-warning">{saveError}</p>}
         </form>
@@ -114,10 +114,10 @@ export function WellnessPage({scenario, day, revision, onSave}: {scenario: Scena
       </section>
       <section className="panel content-panel">
         <SectionTitle icon={<NotebookPen size={19}/>} title="Check-in History" subtitle="Most recent records first"/>
-        {!data.history.some(row => row.source === 'checkin') && <p className="muted">Aún no hay autorregistros personales.</p>}
+        {!data.history.some(row => row.source === 'checkin') && <p className="muted">No personal check-ins yet.</p>}
         <ol className="history-list">{data.history.slice(0, 10).map((row, index) => <li key={`${row.recordedAt}-${index}`}>
-          <div><strong>{row.source === 'checkin' ? new Date(row.recordedAt).toLocaleString() : dateLabel(row.date)}</strong><span>{row.source === 'checkin' ? `Manual #${row.id}` : 'Simulation'}</span></div>
-          <p>Ánimo {row.mood}/5{row.stress != null && ` · Estrés ${row.stress}/5`}{row.energy != null && ` · Energía ${row.energy}/5`}</p>
+          <div><strong>{row.source === 'checkin' ? new Date(row.recordedAt).toLocaleString('en-US') : dateLabel(row.date)}</strong><span>{row.source === 'checkin' ? `Manual #${row.id}` : 'Simulation'}</span></div>
+          <p>Mood {row.mood}/5{row.stress != null && ` · Stress ${row.stress}/5`}{row.energy != null && ` · Energy ${row.energy}/5`}</p>
           {row.notes && <p>{row.notes}</p>}
         </li>)}</ol>
       </section>

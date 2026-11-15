@@ -14,7 +14,7 @@ const base: Simulation = {
   event_id: 'n', version: 1, mission_day: null, heart_rate_bpm: null, stress_proxy: null,
   communication_delay_minutes: null, emotional_fatigue_demo: false, pending_live: false, breathing_guide: false,
   orbital: {distance_million_km: 377.74, one_way_seconds: 1260, one_way_label: '21 min 00 s',
-    link_status: 'normal', link_label: 'Enlace nominal', autonomous_override: false, synthetic: true},
+    link_status: 'normal', link_label: 'Link nominal', autonomous_override: false, synthetic: true},
   actions: [], ambience: 'silent', habitat: {oxygen_percent: 20.9, co2_ppm: 600, pressure_kpa: 101.3, reserve_minutes_demo: 40,
     sealed_sectors: [], oxygen_reserve: 'off', lighting_percent: 65, dust_storm: false},
 }
@@ -30,31 +30,31 @@ it('applies the confirmed snapshot, preserves Zero-UI exit and voice controls, a
   }))
   const {container} = render(<App/>)
   const mode = () => container.querySelector('.app-shell')?.getAttribute('data-aegis-mode')
-  await waitFor(() => expect(screen.getByRole('button', {name: '↺ Restaurar Nominal'}).getAttribute('aria-pressed')).toBe('true'))
-  const orbital = within(screen.getByRole('region', {name: 'Monitor Tierra–Marte'}))
-  expect(orbital.getByText('Enlace nominal')).toBeTruthy()
-  expect(orbital.getByText(/21 min 00 s ida/)).toBeTruthy()
-  const leak = screen.getByRole('button', {name: 'Fuga de O₂'}) as HTMLButtonElement
+  await waitFor(() => expect(screen.getByRole('button', {name: '↺ Restore Nominal'}).getAttribute('aria-pressed')).toBe('true'))
+  const orbital = within(screen.getByRole('region', {name: 'Monitor Earth–Mars'}))
+  expect(orbital.getByText('Link nominal')).toBeTruthy()
+  expect(orbital.getByText(/21 min 00 s one way/)).toBeTruthy()
+  const leak = screen.getByRole('button', {name: 'O₂ Leak'}) as HTMLButtonElement
   fireEvent.click(leak)
   expect(leak.disabled).toBe(true)
   expect(mode()).toBe('standard')
   resolve(response({...base, scenario_id: 'o2_leak_zero_ui', scenario_name: 'Fuga', active_mode: 'zero_ui',
     event_id: 'l', version: 2, heart_rate_bpm: 68,
-    orbital: {...base.orbital, link_status: 'warning', link_label: 'SIN RESPUESTA EN TIEMPO REAL', autonomous_override: true}, habitat: {...base.habitat, oxygen_percent: 16.4}}))
+    orbital: {...base.orbital, link_status: 'warning', link_label: 'NO REAL-TIME RESPONSE', autonomous_override: true}, habitat: {...base.habitat, oxygen_percent: 16.4}}))
   await screen.findByText('16.4 %')
-  expect(orbital.getByText('SIN RESPUESTA EN TIEMPO REAL')).toBeTruthy()
+  expect(orbital.getByText('NO REAL-TIME RESPONSE')).toBeTruthy()
   expect(orbital.getByText(/AEGIS AUTONOMOUS OVERRIDE/)).toBeTruthy()
   expect(mode()).toBe('zero_ui')
-  expect(screen.getByRole('button', {name: 'Controles de voz'})).toBeTruthy()
-  expect(screen.getByText('Tiempo de reserva ficticio')).toBeTruthy()
+  expect(screen.getByRole('button', {name: 'Voice controls'})).toBeTruthy()
+  expect(screen.getByText('Simulated reserve time')).toBeTruthy()
   expect(container.querySelector('.mission-widgets')?.hasAttribute('hidden')).toBe(true)
   fireEvent.click(screen.getByRole('button', {name: 'Mars Murphy’s Law'}))
-  await screen.findByText(/No se pudo confirmar/)
+  await screen.findByText(/The change could not be confirmed/)
   expect(mode()).toBe('zero_ui')
-  fireEvent.click(screen.getByRole('button', {name: '↺ Restaurar Nominal'}))
+  fireEvent.click(screen.getByRole('button', {name: '↺ Restore Nominal'}))
   await waitFor(() => expect(mode()).toBe('standard'))
   expect(orbital.queryByText(/AEGIS AUTONOMOUS OVERRIDE/)).toBeNull()
-  expect(orbital.getByText('Enlace nominal')).toBeTruthy()
+  expect(orbital.getByText('Link nominal')).toBeTruthy()
 })
 
 it('runs a local analyser on the existing mic graph and disconnects it on exit', () => {
@@ -63,11 +63,11 @@ it('runs a local analyser on the existing mic graph and disconnects it on exit',
   const mic = vi.fn()
   vi.stubGlobal('navigator', {mediaDevices: {getUserMedia: mic}})
   const cancel = vi.spyOn(window, 'cancelAnimationFrame')
-  const props = {error: '', activate: vi.fn(), playing: false, voiceStatus: 'Escuchando', openVoice: vi.fn(), useWorkspace: vi.fn()}
+  const props = {error: '', activate: vi.fn(), playing: false, voiceStatus: 'Listening', openVoice: vi.fn(), useWorkspace: vi.fn()}
   const {rerender} = render(<ScenarioBar {...props}
     snapshot={{...base, scenario_id: 'extreme_isolation', active_mode: 'ground_anchor'}}
     graph={graph as unknown as NonNullable<Parameters<typeof ScenarioBar>[0]['graph']>}/>)
-  expect(screen.getByText('Actividad vocal estimada · no mide emociones ni estrés clínico')).toBeTruthy()
+  expect(screen.getByText('Estimated voice activity · acoustic signal only')).toBeTruthy()
   expect(graph.input.connect).toHaveBeenCalledWith(analyser)
   expect(mic).not.toHaveBeenCalled()
   rerender(<ScenarioBar {...props} snapshot={base}/>)
@@ -107,21 +107,21 @@ it('uses two equal halves of one ten-second cycle', () => {
 })
 
 it('keeps the Bio-Sync guide pausable and dismissible and removes it on nominal', () => {
-  const props = {error: '', activate: vi.fn(), playing: false, voiceStatus: 'Escuchando', openVoice: vi.fn(), useWorkspace: vi.fn()}
+  const props = {error: '', activate: vi.fn(), playing: false, voiceStatus: 'Listening', openVoice: vi.fn(), useWorkspace: vi.fn()}
   const panic: Simulation = {...base, breathing_guide: true, active_mode: 'breathing_sync', scenario_id: 'panic_bio_sync',
-    narrative: 'Anomalía detectada. Respire con calma.'}
+    narrative: 'Anomaly detected. Breathe at a comfortable pace.'}
   const {rerender} = render(<ScenarioBar {...props} snapshot={panic}/>)
-  expect(screen.getByText('Sigue el ritmo solo si te resulta cómodo')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', {name: 'Pausar guía'}))
-  expect(screen.getByText('Guía en pausa')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', {name: 'Reanudar guía'}))
-  fireEvent.click(screen.getByRole('button', {name: 'Ocultar guía'}))
-  expect(screen.queryByText('Sigue el ritmo solo si te resulta cómodo')).toBeNull()
-  fireEvent.click(screen.getByRole('button', {name: 'Mostrar guía'}))
-  expect(screen.getByText(/Anomalía detectada/)).toBeTruthy()
+  expect(screen.getByText('Follow the rhythm at a comfortable pace')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', {name: 'Pause guide'}))
+  expect(screen.getByText('Guide paused')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', {name: 'Resume guide'}))
+  fireEvent.click(screen.getByRole('button', {name: 'Hide guide'}))
+  expect(screen.queryByText('Follow the rhythm at a comfortable pace')).toBeNull()
+  fireEvent.click(screen.getByRole('button', {name: 'Show guide'}))
+  expect(screen.getByText(/Anomaly detected/)).toBeTruthy()
   rerender(<ScenarioBar {...props} snapshot={base}/>)
-  expect(screen.queryByText(/Anomalía detectada/)).toBeNull()
-  expect(screen.queryByRole('button', {name: 'Pausar guía'})).toBeNull()
+  expect(screen.queryByText(/Anomaly detected/)).toBeNull()
+  expect(screen.queryByRole('button', {name: 'Pause guide'})).toBeNull()
 })
 
 it('sends a mood selection to FastAPI before showing success', async () => {
@@ -134,11 +134,11 @@ it('sends a mood selection to FastAPI before showing success', async () => {
   vi.stubGlobal('fetch', fetch)
   render(<App/>)
   fireEvent.click(screen.getByRole('button', {name: 'Psychological Wellness'}))
-  const save = screen.getByRole('button', {name: 'Guardar estado de ánimo'}) as HTMLButtonElement
+  const save = screen.getByRole('button', {name: 'Save mood'}) as HTMLButtonElement
   expect(save.disabled).toBe(true)
-  fireEvent.click(screen.getByRole('radio', {name: /^Bien$/}))
+  fireEvent.click(screen.getByRole('radio', {name: /^Good$/}))
   fireEvent.click(save)
-  await screen.findByText('Autorregistro guardado.')
+  await screen.findByText('Check-in saved.')
   expect(fetch.mock.calls.some(([path]) => path.includes('/api/wellness/checkin'))).toBe(true)
 })
 
@@ -148,16 +148,16 @@ it('renders the Bio-Sync phase boundaries using a fake clock and cancels its fra
   vi.stubGlobal('cancelAnimationFrame', window.clearTimeout.bind(window))
   const {unmount, container} = render(<BreathingTrack epoch={Date.now()} pausedAt={null}/>)
   const track = container.querySelector<HTMLElement>('.breathing-track')!
-  expect(screen.getByText('INHALA')).toBeTruthy()
+  expect(screen.getByText('BREATHE IN')).toBeTruthy()
   act(() => vi.advanceTimersByTime(4990))
-  expect(screen.getByText('INHALA')).toBeTruthy()
+  expect(screen.getByText('BREATHE IN')).toBeTruthy()
   act(() => vi.advanceTimersByTime(10))
-  expect(screen.getByText('EXHALA')).toBeTruthy()
+  expect(screen.getByText('BREATHE OUT')).toBeTruthy()
   expect(track.style.getPropertyValue('--breath-position')).toBe('1')
   act(() => vi.advanceTimersByTime(4990))
-  expect(screen.getByText('EXHALA')).toBeTruthy()
+  expect(screen.getByText('BREATHE OUT')).toBeTruthy()
   act(() => vi.advanceTimersByTime(10))
-  expect(screen.getByText('INHALA')).toBeTruthy()
+  expect(screen.getByText('BREATHE IN')).toBeTruthy()
   expect(track.style.getPropertyValue('--breath-position')).toBe('0')
   expect(vi.getTimerCount()).toBe(1)
   unmount()
@@ -169,7 +169,7 @@ it('renders a static Bio-Sync guide with reduced motion and schedules no frames'
   const removeEventListener = vi.fn()
   vi.stubGlobal('matchMedia', () => ({matches: true, addEventListener: vi.fn(), removeEventListener}))
   const {unmount} = render(<BreathingTrack epoch={Date.now()} pausedAt={null}/>)
-  expect(screen.getByText('INHALA 5 s · EXHALA 5 s')).toBeTruthy()
+  expect(screen.getByText('BREATHE IN 5 s · BREATHE OUT 5 s')).toBeTruthy()
   expect(vi.getTimerCount()).toBe(0)
   unmount()
   expect(removeEventListener).toHaveBeenCalledOnce()

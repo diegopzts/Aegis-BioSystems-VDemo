@@ -67,7 +67,7 @@ class VisitorMiddleware:
                 if kind == "websocket":
                     await send({"type": "websocket.close", "code": 1013})
                 else:
-                    await JSONResponse({"detail": "La demo está ocupada. Intenta más tarde."}, 503)(scope, receive, send)
+                    await JSONResponse({"detail": "The demo is busy. Try again later."}, 503)(scope, receive, send)
                 return
             self.visitors[identity] = Visitor()
 
