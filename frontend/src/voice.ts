@@ -8,8 +8,10 @@ import { simulationSchema, type Simulation } from './simulation'
 export type VoiceState = 'disconnected' | 'connecting' | 'listening' | 'responding' | 'receiving' | 'playing' |
   'suspended' | 'text-only' | 'no-audio' | 'audio-error' | 'error'
 type Transcript = {id: string; role: 'user' | 'assistant'; text: string; finished: boolean}
-type Diagnostics = {pendingMs: number; chunks: number; droppedMs: number; reconnects: number; interruptions: number; received: number; rejected: number}
-const emptyDiagnostics = {pendingMs: 0, chunks: 0, droppedMs: 0, reconnects: 0, interruptions: 0, received: 0, rejected: 0}
+type Diagnostics = {pendingMs: number; chunks: number; droppedMs: number; reconnects: number; interruptions: number; received: number; rejected: number;
+  played: number; underruns: number; rate: number; contextState: string; socketState: number; outputLatencyMs: number}
+const emptyDiagnostics: Diagnostics = {pendingMs: 0, chunks: 0, droppedMs: 0, reconnects: 0, interruptions: 0, received: 0, rejected: 0,
+  played: 0, underruns: 0, rate: 0, contextState: 'closed', socketState: 3, outputLatencyMs: 0}
 const backoff = [500, 1500, 3500]
 
 export function liveSocketUrl(page: string) {
@@ -24,7 +26,7 @@ type Session = {
   id: string; handshake?: number; reconnects: number; connection: number; linked: boolean; interruptions: number;
   ready: boolean; responding: boolean; meter: OutputMeter;
   drain?: () => void
-  received: number; rejected: number; outcome?: 'text-only' | 'no-audio' | 'audio-error'
+  received: number; rejected: number; rate?: number; outcome?: 'text-only' | 'no-audio' | 'audio-error'
 }
 
 function closeSocket(session: Session) {
@@ -185,7 +187,8 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
       return
     } finally { opening.current = false }
 
-    function updatePlayback() {
+    let lastReport = -Infinity
+    function updatePlayback(forceReport = false) {
       if (sessionRef.current !== session) return
       try { session.queue.pump() }
       catch { fail('El navegador no pudo conectar o iniciar la salida de voz.'); return }
@@ -198,22 +201,28 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
         resumeConnection()
         return
       }
-      setDiagnostics(previous => previous.pendingMs === stats.pendingMs && previous.chunks === stats.chunks &&
-        previous.droppedMs === stats.droppedMs && previous.reconnects === session.reconnects && previous.interruptions === session.interruptions &&
-        previous.received === session.received && previous.rejected === session.rejected
-        ? previous : {...stats, reconnects: session.reconnects, interruptions: session.interruptions, received: session.received, rejected: session.rejected})
+      const now = performance.now()
+      if (forceReport || now - lastReport >= 125) {
+        lastReport = now
+        const next = {...stats, reconnects: session.reconnects, interruptions: session.interruptions, received: session.received,
+          rejected: session.rejected, rate: session.rate ?? 0, contextState: session.context.state,
+          socketState: session.socket?.readyState ?? 3,
+          outputLatencyMs: Math.round(((session.context.baseLatency || 0) + (session.context.outputLatency || 0)) * 1000)}
+        setDiagnostics(previous => (Object.keys(next) as (keyof Diagnostics)[]).every(key => previous[key] === next[key]) ? previous : next)
+      }
       if (session.context.state !== 'running') { setState('suspended'); return }
       if (session.meter.playing(session.context.currentTime)) setState('playing')
       else if (stats.chunks || stats.pendingMs) setState('receiving')
       else if (!session.ready) setState('connecting')
       else setState(session.outcome ?? (session.responding ? 'responding' : 'listening'))
     }
-    session.context.onstatechange = updatePlayback
+    session.context.onstatechange = () => updatePlayback(true)
     session.timer = window.setInterval(updatePlayback, 35)
 
     function reconnect(message: string, retry = true) {
       closeSocket(session)
       session.responding = false
+      session.queue.finish()
       if (session.queue.diagnostics.chunks || session.queue.diagnostics.pendingMs) {
         session.drain = () => reconnect(message, retry)
         if (!retry) setError(message)
@@ -344,6 +353,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
           }
           case 'audio_format':
             format = {rate: event.rate, channels: event.channels}
+            if (Number.isInteger(event.rate) && event.rate >= 8000 && event.rate <= 96000 && event.channels === 1) session.rate = event.rate
             break
           case 'error': {
             const message = typeof event.message === 'string' ? event.message : 'Gemini Live no está disponible.'
@@ -378,6 +388,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
             beginTurn(event.turn)
             terminalTurn = event.turn
             pendingTurn = undefined
+            session.queue.finish()
             session.responding = false
             session.outcome = turnRejected || unframed ? 'audio-error' : turnReceived || interruptTurn === event.turn ? undefined :
               turnText ? 'text-only' : 'no-audio'
@@ -417,7 +428,7 @@ export function useVoice(scenario: Scenario, onActions: (actions: Action[]) => v
             break
           }
         }
-        updatePlayback()
+        updatePlayback(['turn_end', 'interrupt', 'audio_format'].includes(event.type))
       }
     }
 

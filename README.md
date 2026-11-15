@@ -55,6 +55,12 @@ El archivo `frontend/public/biosystems/cuerpo.glb` tiene 26,48 MB y se descarga 
 
 La práctica de estrés y sus gráficas se mantienen separadas de la telemetría simulada de AEGIS. Gemini conserva el contrato existente: cuerpo completo, cabeza, pecho o extremidades, desde el frente, izquierda, derecha o atrás. Para volver a la vista inicial usa **Reset view** o pide a Gemini que restablezca el modelo. El checkpoint `checkpoint/pre-biosystems-3d-migration` conserva la versión inmediatamente anterior.
 
+### Vital Monitoring en vivo
+
+El monitor de `datossensor.html` conserva su interfaz y su motor Canvas 2D dentro de React y Shadow DOM. El ECG se desplaza a 120 puntos visuales por segundo independientemente de la frecuencia de pantalla. Los perfiles ECG, controles personalizados, oximetría, NIRS y perfiles redox son sintéticos. **Pausar** congela la gráfica y **Reiniciar simulación** restablece controles y tendencia. El historial de misión anterior sigue accesible en su sección y mantiene sus escalas y exportaciones.
+
+La simulación envía a FastAPI las cifras que se muestran; Gemini puede consultarlas con `get_live_vitals`, junto con la cobertura disponible del último minuto. La sesión no guarda estas cifras en disco. El puerto Web Serial opcional lee valores ADC de texto (una muestra por línea, 9600 o 115200 bps) y los representa solo en el navegador. No envía muestras ni estimaciones de salud a FastAPI o Gemini. El botón USB requiere HTTPS o localhost, un navegador con Web Serial y un dispositivo conectado.
+
 ## Configurar Gemini
 
 1. Crea una clave para Gemini API en [Google AI Studio](https://aistudio.google.com/app/apikey).
@@ -85,7 +91,9 @@ Prueba «Guarda ánimo 4, estrés 3 y energía 5», «Edita el estrés del regis
 2. Interrumpe hablando mientras AEGIS reproduce su respuesta. La reproducción anterior debe detenerse. Si el navegador pausa el audio, pulsa **Reanudar audio**.
 3. Desconecta Internet brevemente, vuelve a conectarlo y comprueba los intentos de reconexión. Se hacen como máximo tres intentos, con esperas de 0,5, 1,5 y 3,5 segundos. Si se agotan, pulsa **Reconectar**. Se establece una sesión nueva sin reenviar audio anterior. El historial de voz de Gemini no se reanuda. **Detener voz** libera los recursos.
 
-El error “Audio playback fell behind” sucedía cuando se programaban todos los fragmentos de golpe y el cursor se alejaba más de 12 segundos del reloj de audio. Ahora se programan hasta 180 ms por adelantado. Si se acumulan más de 1,5 s pendientes de programar o más de 128 fragmentos, se conserva hasta 750 ms del audio reciente y se descarta el excedente antiguo. Esto puede acortar una frase durante una ráfaga severa, sin reiniciar la sesión. El diagnóstico muestra duración, número de fragmentos, milisegundos descartados y reconexiones, sin datos de voz. La captura envía PCM mono de 16 bits y 16 kHz. La salida se decodifica según su tipo MIME, con 24 kHz como valor predeterminado documentado. Fuentes: [Gemini Live SDK](https://ai.google.dev/gemini-api/docs/live-api/get-started-sdk), [formatos e interrupciones](https://ai.google.dev/gemini-api/docs/live-api/capabilities), [sesiones Live](https://ai.google.dev/gemini-api/docs/live-api/session-management) y [reloj de Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/currentTime).
+Para absorber llegadas irregulares, la voz espera a reunir 120 ms al arrancar o 240 ms si el búfer se vacía. Si no alcanza ese margen en 300 ms, reproduce lo disponible. Al finalizar el turno, reproduce de inmediato el fragmento pendiente, aunque sea más corto. El reproductor programa fragmentos completos con el reloj de audio y conserva el orden. Si alcanza el límite de memoria (32 MiB o 8192 fragmentos), drena el audio ya aceptado y avisa; no reemplaza fragmentos pendientes por los más recientes.
+
+El diagnóstico indica tasa PCM, fragmentos aceptados y reproducidos, vaciados del búfer, latencia de salida aproximada, estado de audio y del socket, sin audio ni transcripciones. La captura envía PCM mono de 16 bits y 16 kHz, little-endian; la salida usa la tasa anunciada en el MIME, con 24 kHz si no viene indicada. Fuentes: [formatos de Gemini Live](https://ai.google.dev/gemini-api/docs/live-api/capabilities), [sesiones Live](https://ai.google.dev/gemini-api/docs/live-api/session-management) y [reloj de Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/currentTime).
 
 ### Probar Gemini de texto
 

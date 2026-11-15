@@ -37,15 +37,21 @@ def greeting_instruction():
     return f"Saluda en español con esta pregunta exacta, sin introducción: «{GREETING}»."
 
 
-PCM_TYPE = re.compile(r"audio/pcm(?:;\s*rate=(\d{4,6}))?(?:;\s*channels=(\d+))?", re.I)
+PCM_PARAM = re.compile(r'(rate|channels)\s*=\s*"?([0-9]{1,6})"?', re.I)
 
 
 def pcm_format(mime_type: str):
-    match = PCM_TYPE.fullmatch(mime_type.strip())
-    if not match:
+    kind, *params = mime_type.split(";")
+    if kind.strip().lower() != "audio/pcm":
         return None
-    rate = int(match[1]) if match[1] else 24000
-    channels = int(match[2]) if match[2] else 1
+    values = {}
+    for param in params:
+        match = PCM_PARAM.fullmatch(param.strip())
+        if not match or match[1].lower() in values or param.count('"') == 1:
+            return None
+        values[match[1].lower()] = int(match[2])
+    rate = values.get("rate", 24000)
+    channels = values.get("channels", 1)
     return (rate, channels) if 8000 <= rate <= 96000 and channels == 1 else None
 
 

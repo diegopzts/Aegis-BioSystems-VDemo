@@ -120,7 +120,7 @@ it('uses orbital mode and switches the display without remounting Companion', as
     emit({type: 'state', value: 'listening'})
     emit({type: 'audio_format', rate: 24000, channels: 1})
     emit({type: 'audio_chunk', turn: 1, sequence: 1, session_id: socket.url.searchParams.get('session_id')})
-    socket.onmessage?.({data: new Int16Array(2400).buffer})
+    socket.onmessage?.({data: new Int16Array(3120).buffer})
   })
   expect(startAudio).toHaveBeenCalledOnce()
   const draft = screen.getByRole('textbox', {name: 'Mensaje para AEGIS'}) as HTMLTextAreaElement

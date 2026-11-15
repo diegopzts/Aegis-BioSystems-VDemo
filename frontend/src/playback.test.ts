@@ -37,6 +37,7 @@ describe('streaming playback', () => {
     const {queue, context, nodes} = audioContext()
     expect(queue.push(chunk(.04))).toBe(true)
     expect(queue.push(chunk(.04))).toBe(true)
+    queue.finish()
     queue.pump()
     expect(nodes[0].start.mock.calls[0][0]).toBeCloseTo(10.025)
     expect(nodes[1].start.mock.calls[0][0]).toBeCloseTo(10.065)
@@ -44,6 +45,7 @@ describe('streaming playback', () => {
     expect(nodes.every(node => node.disconnect.mock.calls.length === 1)).toBe(true)
     context.currentTime = 11
     queue.push(chunk(.04))
+    queue.finish()
     queue.pump()
     expect(nodes[2].start.mock.calls[0][0]).toBeCloseTo(11.025)
     expect(queue.diagnostics.droppedMs).toBe(0)
@@ -59,6 +61,7 @@ describe('streaming playback', () => {
     expect(queue.diagnostics.pendingMs).toBe(40)
     expect(queue.diagnostics.droppedMs).toBe(80)
     context.state = 'running'
+    queue.finish()
     queue.pump()
     expect(nodes[0].start.mock.calls[0][2]).toBeCloseTo(.04)
     expect(queue.push(chunk(.04))).toBe(false)
@@ -70,6 +73,32 @@ describe('streaming playback', () => {
     expect(queue.diagnostics.chunks).toBe(0)
     expect(nodes[0].stop).not.toHaveBeenCalled()
     expect(nodes[1].stop).toHaveBeenCalledOnce()
+  })
+
+  it('absorbs irregular bursts, rebuilds after a real underrun and flushes the last short chunk', () => {
+    const {queue, context, nodes} = audioContext()
+    queue.push(chunk(.04))
+    queue.pump()
+    expect(nodes).toHaveLength(0)
+    context.currentTime = 10.05
+    queue.push(chunk(.08))
+    queue.pump()
+    expect(nodes[1].start.mock.calls[0][0]).toBeCloseTo(10.115)
+    context.currentTime = 10.18
+    queue.push(chunk(.045))
+    queue.pump()
+    expect(nodes[2].start.mock.calls[0][0]).toBeCloseTo(10.195)
+    expect(queue.diagnostics.underruns).toBe(0)
+    context.currentTime = 10.30
+    queue.push(chunk(.055))
+    queue.pump()
+    expect(queue.diagnostics.underruns).toBe(1)
+    expect(nodes).toHaveLength(3)
+    queue.finish()
+    queue.pump()
+    expect(nodes[3].start.mock.calls[0]).toEqual([expect.closeTo(10.325), 0, .055])
+    nodes.forEach(node => node.onended?.())
+    expect(queue.diagnostics).toMatchObject({played: 4, droppedMs: 0})
   })
 })
 

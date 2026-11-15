@@ -96,7 +96,7 @@ it('measures scheduled PCM only during playback and gates quiet residual audio o
 })
 
 async function openPlayback(withoutMic = false) {
-  vi.useFakeTimers()
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'performance']})
   const played: ReturnType<typeof vi.fn>[] = []
   const stops: ReturnType<typeof vi.fn>[] = []
   const connections: ReturnType<typeof vi.fn>[] = []
@@ -166,6 +166,7 @@ it('can connect and play Gemini output without a microphone when launched from o
     event('audio_format', {rate: 24000, channels: 1})
     event('audio_chunk', {session_id: id, turn: 1, sequence: 1})
     pcm()
+    event('turn_end', {session_id: id, turn: 1})
   })
   expect(played).toHaveLength(1)
   expect(result.current.error).toMatch(/Micrófono no disponible/)
@@ -184,6 +185,7 @@ it('plays ordinary voice on the destination and distinguishes text-only and inco
     event('audio_format', {rate: 24000, channels: 1})
     event('audio_chunk', {...turn, sequence: 1})
     pcm()
+    event('turn_end', turn)
   })
   expect(played).toHaveLength(1)
   expect(connections[0]).toHaveBeenCalledWith(destination)
@@ -217,7 +219,7 @@ it('plays all ordinary speech in order after Gemini finishes generating faster t
   act(() => {
     event('state', {value: 'listening'})
     event('audio_format', {rate: 24000, channels: 1})
-    for (let sequence = 1; sequence <= 100; sequence++) {
+    for (let sequence = 1; sequence <= 600; sequence++) {
       event('audio_chunk', {...turn, sequence})
       pcm(sequence)
     }
@@ -225,10 +227,10 @@ it('plays all ordinary speech in order after Gemini finishes generating faster t
     event('generation_end', turn)
     event('turn_end', turn)
   })
-  expect(result.current.diagnostics.received).toBe(100)
-  expect(result.current.diagnostics.pendingMs).toBeGreaterThanOrEqual(4000)
+  expect(result.current.diagnostics.received).toBe(600)
+  expect(result.current.diagnostics.pendingMs).toBeGreaterThanOrEqual(24000)
   act(() => {
-    for (let tick = 1; tick <= 120; tick++) {
+    for (let tick = 1; tick <= 700; tick++) {
       const now = tick * .035
       setClock(now)
       sources.forEach((source, i) => {
@@ -240,8 +242,12 @@ it('plays all ordinary speech in order after Gemini finishes generating faster t
   })
   const samples = sources.map(source => source.buffer!.getChannelData(0)[0] * 32768)
   expect(samples.filter((sample, i) => i === 0 || sample !== samples[i - 1])).toEqual(
-    Array.from({length: 100}, (_, i) => i + 1))
-  expect(played.reduce((duration, start) => duration + start.mock.calls[0][2], 0)).toBeCloseTo(4)
+    Array.from({length: 600}, (_, i) => i + 1))
+  expect(played.reduce((duration, start) => duration + start.mock.calls[0][2], 0)).toBeCloseTo(24)
+  for (let i = 1; i < played.length; i++) {
+    const [previousStart, , previousDuration] = played[i - 1].mock.calls[0]
+    expect(played[i].mock.calls[0][0]).toBeCloseTo(previousStart + previousDuration)
+  }
   expect(result.current.diagnostics).toMatchObject({pendingMs: 0, droppedMs: 0})
   unmount()
 })
@@ -262,7 +268,7 @@ it('drains accepted narration across scenario changes and endings, rejects stale
     frame(1)
     frame(1)
   })
-  expect(played).toHaveLength(1)
+  expect(played).toHaveLength(0)
   expect(result.current.outputLevel).toBe(0)
   rerender({day: 29})
   act(() => {

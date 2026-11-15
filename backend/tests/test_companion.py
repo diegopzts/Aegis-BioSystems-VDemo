@@ -159,6 +159,7 @@ def test_config_reads_backend_dotenv_from_any_cwd(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize(("mime", "expected"), [
     ("audio/pcm", (24000, 1)), ("audio/pcm;rate=32000;channels=1", (32000, 1)),
+    ('Audio/PCM; channels = 1; rate="22050"', (22050, 1)), ("audio/pcm;rate=24000;rate=32000", None),
     ("audio/pcm;rate=16000;channels=2", None), ("audio/wav", None),
 ])
 def test_output_pcm_format(mime, expected):

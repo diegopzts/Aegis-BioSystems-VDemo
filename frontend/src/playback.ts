@@ -1,9 +1,12 @@
 const LEAD = 0.025
-const LOOKAHEAD = 0.18
+const LOOKAHEAD = 0.35
+const INITIAL_BUFFER = 0.12
+const RECOVERY_BUFFER = 0.24
+const MAX_START_WAIT = 0.3
 const MAX_SOURCES = 128
 const MAX_BUFFER_BYTES = 32 * 1024 * 1024
 const MAX_BUFFER_COUNT = 8192
-type Chunk = {buffer: AudioBuffer; offset: number; bytes: number; references: number}
+type Chunk = {buffer: AudioBuffer; bytes: number}
 
 export function decodePcm(data: ArrayBuffer, rate: number, channels: number, context: AudioContext) {
   if (channels !== 1 || !Number.isInteger(rate) || rate < 8000 || rate > 96000 ||
@@ -23,12 +26,19 @@ export class PlaybackQueue {
   private cursor = 0
   private queued = 0
   private dropped = 0
+  private waitingSince: number | undefined
+  private primed = false
+  private finishing = false
+  private rebuffering = false
+  private played = 0
+  private underruns = 0
 
   constructor(private context: AudioContext, private onSchedule?: (buffer: AudioBuffer, start: number, offset: number, duration: number) => void) {}
 
   get diagnostics() {
     return {pendingMs: Math.round((this.queued + Math.max(0, this.cursor - this.context.currentTime)) * 1000),
-      chunks: this.chunks.length + this.sources.size, droppedMs: Math.round(this.dropped * 1000)}
+      chunks: this.chunks.length + this.sources.size, droppedMs: Math.round(this.dropped * 1000),
+      played: this.played, underruns: this.underruns}
   }
 
   push(buffer: AudioBuffer) {
@@ -39,45 +49,63 @@ export class PlaybackQueue {
     }
     this.bufferedBytes += bytes
     this.bufferCount++
-    this.chunks.push({buffer, offset: 0, bytes, references: 1})
+    this.chunks.push({buffer, bytes})
     this.queued += buffer.duration
+    this.finishing = false
     return true
   }
 
   private releaseChunk(chunk: Chunk) {
-    if (--chunk.references === 0) {
-      this.bufferCount--
-      this.bufferedBytes -= chunk.bytes
-    }
+    this.bufferCount--
+    this.bufferedBytes -= chunk.bytes
   }
+
+  /** The provider is finished; release even a tail shorter than the jitter buffer. */
+  finish() { this.finishing = true }
 
   pump() {
     if (this.context.state !== 'running') return
     const now = this.context.currentTime
+    if (this.primed && this.cursor < now) {
+      this.primed = false
+      if (!this.finishing) {
+        this.underruns++
+        this.rebuffering = true
+      }
+    }
+    if (!this.chunks.length) {
+      if (!this.primed) this.finishing = false
+      return
+    }
+    if (!this.primed) {
+      this.waitingSince ??= now
+      const target = this.rebuffering ? RECOVERY_BUFFER : INITIAL_BUFFER
+      if (!this.finishing && this.queued + 1e-6 < target && now - this.waitingSince < MAX_START_WAIT) return
+      this.waitingSince = undefined
+      this.rebuffering = false
+      this.primed = true
+      this.cursor = now + LEAD
+    }
     while (this.chunks.length && this.cursor < now + LOOKAHEAD && this.sources.size < MAX_SOURCES) {
       const chunk = this.chunks[0]
-      const start = this.cursor <= now ? now + LEAD : this.cursor
-      const remaining = chunk.buffer.duration - chunk.offset
-      const duration = Math.min(remaining, now + LOOKAHEAD - start)
-      if (duration <= 0) return
+      const start = this.cursor
+      const duration = chunk.buffer.duration
       const source = this.context.createBufferSource()
       source.buffer = chunk.buffer
       source.connect(this.context.destination)
       source.onended = () => {
-        if (this.sources.delete(source)) this.releaseChunk(chunk)
+        if (this.sources.delete(source)) {
+          this.releaseChunk(chunk)
+          this.played++
+        }
         source.disconnect()
       }
-      source.start(start, chunk.offset, duration)
-      chunk.references++
+      source.start(start, 0, duration)
       this.sources.add(source)
-      this.onSchedule?.(chunk.buffer, start, chunk.offset, duration)
+      this.onSchedule?.(chunk.buffer, start, 0, duration)
       this.cursor = start + duration
       this.queued = Math.max(0, this.queued - duration)
-      chunk.offset += duration
-      if (duration >= remaining) {
-        this.chunks.shift()
-        this.releaseChunk(chunk)
-      }
+      this.chunks.shift()
     }
   }
 
@@ -93,6 +121,8 @@ export class PlaybackQueue {
     this.chunks = []
     this.queued = 0
     this.cursor = 0
+    this.waitingSince = undefined
+    this.primed = this.finishing = this.rebuffering = false
   }
 }
 

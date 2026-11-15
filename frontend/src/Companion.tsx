@@ -193,6 +193,7 @@ export function Companion({context, ui, visible, breathing, simulation, onSimula
     {voice.state === 'suspended' && <button className="button" onClick={() => void voice.resume()}>Reanudar audio</button>}
     <details className="voice-diagnostics"><summary>Diagnóstico de audio</summary>
       <span>{voice.diagnostics.received} fragmentos PCM aceptados · {voice.diagnostics.rejected} incompatibles · {voice.diagnostics.pendingMs} ms pendientes · {voice.diagnostics.droppedMs} ms descartados · {voice.diagnostics.reconnects} reconexiones · {voice.diagnostics.interruptions} interrupciones</span>
+      <span>{voice.diagnostics.rate || '—'} Hz PCM · {voice.diagnostics.played} reproducidos · {voice.diagnostics.underruns} vaciados de búfer · latencia de salida ≈ {voice.diagnostics.outputLatencyMs} ms · AudioContext: {voice.diagnostics.contextState} · WebSocket: {['conectando', 'abierto', 'cerrando', 'cerrado'][voice.diagnostics.socketState] ?? '—'}</span>
       {voice.turnStatus && <p>Sesión {voice.turnStatus.session.slice(0, 8)} · turno {voice.turnStatus.turn} · narrativa {voice.turnStatus.narrative?.slice(0, 8) ?? '—'} · {voice.turnStatus.event}</p>}
     </details>
     {voice.error && <p className="inline-warning" role="alert">{voice.error}</p>}

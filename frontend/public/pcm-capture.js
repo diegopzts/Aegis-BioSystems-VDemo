@@ -4,7 +4,7 @@ class PcmCapture extends AudioWorkletProcessor {
     this.phase = 0
     this.sum = 0
     this.count = 0
-    this.chunk = new Int16Array(640)
+    this.chunk = new DataView(new ArrayBuffer(1280))
     this.index = 0
   }
   process(inputs) {
@@ -17,12 +17,13 @@ class PcmCapture extends AudioWorkletProcessor {
       if (this.phase >= sampleRate) {
         this.phase -= sampleRate
         const value = Math.min(1, Math.max(-1, this.sum / this.count))
-        this.chunk[this.index++] = Math.round(value * (value < 0 ? 32768 : 32767))
+        this.chunk.setInt16(this.index, Math.round(value * (value < 0 ? 32768 : 32767)), true)
+        this.index += 2
         this.sum = 0
         this.count = 0
-        if (this.index === this.chunk.length) {
+        if (this.index === this.chunk.byteLength) {
           this.port.postMessage(this.chunk.buffer, [this.chunk.buffer])
-          this.chunk = new Int16Array(640)
+          this.chunk = new DataView(new ArrayBuffer(1280))
           this.index = 0
         }
       }
