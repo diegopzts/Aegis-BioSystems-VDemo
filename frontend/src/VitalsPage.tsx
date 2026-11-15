@@ -1,10 +1,11 @@
 import { Activity, ChartNoAxesColumn, ChartNoAxesCombined, Download } from 'lucide-react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useResource } from './api'
 import { DataChart, ResourceStatus, SectionTitle, metricIcons } from './components'
 import { metricColors, metricLabels, metrics, spans, type Metric, type Scenario, type Span, type VitalSeries } from './contracts'
 
 const spanLabels: Record<Span, string> = {'24h': '24 hours', '7d': '7 days', '30d': '30 days'}
+const LiveVitalsMonitor = lazy(() => import('./LiveVitalsMonitor').then(module => ({default: module.LiveVitalsMonitor})))
 
 function download(series: VitalSeries, format: 'csv' | 'json') {
   const payload = format === 'json' ? JSON.stringify(series, null, 2) :
@@ -24,6 +25,9 @@ export function VitalsPage({scenario, day, revision, metric, span, setMetric, se
   const [mode, setMode] = useState<'line' | 'bar'>('line')
   const {data, error, retry} = useResource<VitalSeries>(`vitals?scenario=${scenario}&metric=${metric}&range=${span}&day=${day}`, revision, true)
   return <>
+    <Suspense fallback={<p role="status">Cargando monitor en vivo…</p>}><LiveVitalsMonitor/></Suspense>
+    <details className="panel content-panel" open={metric !== 'heartRate' || span !== '7d'}>
+    <summary>Historial simulado de la misión · independiente del monitor en vivo</summary>
     <div className="control-strip">{metrics.map(key => {
       const Icon = metricIcons[key]
       return <button key={key} className="button" aria-pressed={metric === key} onClick={() => setMetric(key)}><Icon size={16}/>{metricLabels[key]}</button>
@@ -44,5 +48,6 @@ export function VitalsPage({scenario, day, revision, metric, span, setMetric, se
         mode={mode} baseline={data.baseline} unit={data.unit} height={360} domain={metric === 'sleepHours' ? [0, span === '24h' ? 1.1 : 10] : undefined}/>
       <p className="baseline"><i/> Individual baseline {Number(data.baseline.toFixed(2))} {data.unit}{metric === 'sleepHours' && span === '24h' ? ' per hour' : ''}</p>
     </section> : <ResourceStatus error={error} retry={retry}/>}
+    </details>
   </>
 }

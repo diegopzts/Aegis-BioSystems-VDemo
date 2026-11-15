@@ -19,7 +19,7 @@ const BodyPage = lazy(() => import('./BodyPage').then(module => ({default: modul
 const navIcons = {overview: LayoutDashboard, vitals: Activity, sleep: Moon, wellness: HeartHandshake, body: Box}
 const subtitles: Record<Section, string> = {
   overview: 'Crew health and wellbeing across the Mars transit.',
-  vitals: 'Review simulated physiology against the crew member’s individual baseline.',
+  vitals: 'Explore the live training monitor and the separate simulated mission history.',
   sleep: 'Explore 30 mission nights, sleep timing and recovery patterns.',
   wellness: 'Track how you feel and make room for recovery.',
   body: 'Explore the anatomical model and view simulated mission telemetry separately.',

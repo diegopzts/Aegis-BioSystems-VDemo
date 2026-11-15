@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import config
+from .live_vitals import MonitorStore, visitor_monitor
 from .situations import SituationStore, visitor_situations
 
 ID = re.compile(r"[A-Za-z0-9_-]{43}")
@@ -25,6 +26,7 @@ visitor_id: ContextVar[str | None] = ContextVar("visitor_id", default=None)
 class Visitor:
     directory: TemporaryDirectory = field(default_factory=lambda: TemporaryDirectory(prefix="aegis-"))
     situations: SituationStore = field(default_factory=SituationStore)
+    monitor: MonitorStore = field(default_factory=MonitorStore)
     seen: float = field(default_factory=monotonic)
     active: int = 0
 
@@ -74,6 +76,7 @@ class VisitorMiddleware:
         db_token = visitor_db.set(Path(visitor.directory.name) / "wellness.sqlite3")
         store_token = visitor_situations.set(visitor.situations)
         id_token = visitor_id.set(identity)
+        monitor_token = visitor_monitor.set(visitor.monitor)
 
         async def send_private(message):
             if message["type"] == "http.response.start":
@@ -87,6 +90,7 @@ class VisitorMiddleware:
         try:
             await self.app(scope, receive, send_private)
         finally:
+            visitor_monitor.reset(monitor_token)
             visitor_id.reset(id_token)
             visitor_situations.reset(store_token)
             visitor_db.reset(db_token)

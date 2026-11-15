@@ -10,6 +10,8 @@
 !frontend/src/*.ts
 !frontend/src/*.tsx
 !frontend/src/*.css
+!frontend/src/vitalMonitor.html
+!frontend/src/vitalMonitor.js
 !frontend/src/orbital-stars.svg
 frontend/src/*.test.*
 !frontend/public/

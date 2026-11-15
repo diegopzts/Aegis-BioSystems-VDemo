@@ -15,6 +15,7 @@ from . import companion_state as state, config, wellness
 from .analytics import calendar, sleep_analysis
 from .gemini import CompanionError, ChatReply, chat
 from .live import live
+from .live_vitals import MonitorUpdate, monitor
 from .mission import overview
 from .models import ChatRequest, Checkin, Metric, MissionDay, MoodEntry, Scenario, Span, WorkspaceView
 from .simulation import vitals
@@ -78,6 +79,16 @@ def local_origin(request: Request):
     origin = request.headers.get("origin")
     if origin and not config.origin_allowed(origin, request.headers.get("host")):
         raise HTTPException(403, "Origen no autorizado.")
+
+
+@app.post("/api/live-vitals", status_code=204, dependencies=[Depends(local_origin)])
+def update_live_vitals(frame: MonitorUpdate):
+    monitor().set(frame)
+
+
+@app.get("/api/live-vitals")
+def live_vitals():
+    return JSONResponse(monitor().read(), headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/wellness/checkin", response_model=MoodEntry, status_code=201, dependencies=[Depends(local_origin)])

@@ -11,6 +11,7 @@ from . import analytics, mission, simulation, wellness
 from .companion_state import Change, MissionPosition, StateError, activity, audit, reviewed_alert_history, reviewed_alert_ids, store, undo
 from .situations import LightingInput, ReserveInput, SectorInput, StabilizeInput, active_situations, apply_current_pulse, situations
 from .interface_actions import ACTION, Action
+from .live_vitals import monitor
 from .models import Checkin, EntryId, Metric, MissionDay, Notes, Rating, Scenario, Span, StrictModel
 
 Period = Literal["7d", "14d", "30d"]
@@ -81,6 +82,12 @@ class Tool:
 
 
 TOOLS = {
+    "get_live_vitals": Tool(
+        "Para preguntas sobre la frecuencia actual, señales en vivo o cambios del último minuto en Vital Monitoring. "
+        "Los valores vienen del monitor sintético abierto y son independientes del historial de misión. No hay datos "
+        "si está cerrado, pausado o en USB local. Usa la cobertura real y no llames pulso arterial a la frecuencia "
+        "del ECG (especialmente FV); no diagnostiques ni recomiendes tratamiento.", StrictModel,
+    ),
     "get_simulation_state": Tool("Estado, biometría ficticia, hábitat, ambiente y acciones de la situación activa.", StrictModel),
     "seal_habitat_sector": Tool("Sella un sector exclusivamente en el hábitat simulado.", SectorInput, "habitat"),
     "activate_oxygen_reserve": Tool("Ajusta la reserva de oxígeno ficticia.", ReserveInput, "habitat"),
@@ -167,7 +174,9 @@ def wellbeing(context, period: Period):
 def read(name, args, context, ui) -> ReadResult:
     scenario, day = context.scenario, context.day
     provenance: Source = "synthetic_simulation"
-    if name == "get_mission_overview":
+    if name == "get_live_vitals":
+        data = monitor().read()
+    elif name == "get_mission_overview":
         position = simulation.dataset(scenario)[day - 1]
         data = {"mission": mission.MISSION_NAME, "scenario": scenario, "day": day,
                 "date": position["date"], "daysAvailable": simulation.DAYS, "plannedDays": 210}

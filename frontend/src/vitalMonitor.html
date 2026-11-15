@@ -1,0 +1,1134 @@
+<style>
+    .monitor {
+      --bg-main: #070d17;
+      --bg-panel: #0d1624;
+      --bg-card: #121e31;
+      --border-color: #1e2f4a;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .monitor {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      padding: 14px;
+      min-width: 0;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .brand h2 {
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+
+    .brand span {
+      color: var(--accent-cyan);
+      font-weight: 400;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      background: #182842;
+    }
+
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #0369a1;
+    }
+
+    .btn-danger.active {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--accent-red);
+      color: #fca5a5;
+    }
+
+    .btn-active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn-custom.active {
+      background: rgba(168, 85, 247, 0.22);
+      border-color: #c084fc;
+      color: #e9d5ff;
+    }
+
+    /* BARRA DE ACOPLAMIENTO CRUZADO */
+    .sync-bar {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sync-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .sync-group label {
+      color: var(--text-secondary);
+    }
+
+    select {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
+    /* GRID PRINCIPAL */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.05fr);
+      gap: 12px;
+      transition: all 0.25s ease;
+    }
+
+    .main-grid.usb-single-mode {
+      grid-template-columns: 1fr;
+    }
+
+    @container (max-width: 960px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .panel-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* ECG CANVAS & METRICS */
+    .ecg-container {
+      position: relative;
+      background: #050911;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      height: 230px;
+      overflow: hidden;
+    }
+
+    canvas#ecgCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .ecg-overlay-bpm {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      text-align: right;
+      background: rgba(7, 13, 23, 0.85);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .bpm-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-green);
+      line-height: 1;
+    }
+
+    .bpm-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .usb-live-monitor {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      background: rgba(7, 13, 23, 0.85);
+      border: 1px solid #1e3a5f;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      color: var(--accent-cyan);
+      display: none;
+    }
+
+    /* CREADOR CUSTOM DE ONDA ECG (SLIDERS) */
+    .custom-ecg-builder {
+      background: #09111f;
+      border: 1px solid #3b2d63;
+      border-left: 4px solid #a855f7;
+      border-radius: 6px;
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .custom-builder-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .custom-builder-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #d8b4fe;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .custom-sliders-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @container (max-width: 850px) {
+      .custom-sliders-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container (max-width: 520px) {
+      .custom-sliders-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-control {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .slider-control-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.74rem;
+    }
+
+    .slider-control-top span:first-child {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .slider-val-badge {
+      color: #e9d5ff;
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 0.78rem;
+    }
+
+    .slider-control input[type="range"] {
+      width: 100%;
+      accent-color: #a855f7;
+      cursor: pointer;
+    }
+
+    .slider-bounds {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: #64748b;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    @container (max-width: 700px) {
+      .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .metric-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+
+    .metric-box .m-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+    }
+
+    .metric-box .m-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .metric-box .m-sub {
+      font-size: 0.68rem;
+      color: var(--accent-green);
+      margin-top: 2px;
+    }
+
+    /* OXÍMETRO DE PULSO (SpO2) */
+    .oximeter-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--accent-green);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.25s ease;
+    }
+
+    .ox-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ox-readout {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .ox-big-val {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent-green);
+    }
+
+    .ox-badge {
+      padding: 4px 9px;
+      border-radius: 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .ox-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    @container (max-width: 600px) {
+      .ox-presets {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .btn-ox {
+      padding: 6px 4px;
+      font-size: 0.71rem;
+      font-weight: 700;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      background: #09101d;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .btn-ox:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-ox.active-sano {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-green);
+      color: #6ee7b7;
+    }
+
+    .btn-ox.active-leve {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: #7dd3fc;
+    }
+
+    .btn-ox.active-moderada {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--accent-yellow);
+      color: #fcd34d;
+    }
+
+    .btn-ox.active-grave {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--accent-red);
+      color: #fca5a5;
+    }
+
+    .ox-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .ox-slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .ox-action-box {
+      background: #09101d;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    /* MÓDULO NIRS (OXIMETRÍA TISULAR Y CEREBRAL — SCHEEREN ET AL., 2012) */
+    .nirs-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.25s ease;
+    }
+
+    .nirs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    @container (max-width: 600px) {
+      .nirs-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .nirs-channel {
+      background: #09101d;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nirs-channel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .nirs-channel-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nirs-channel-site {
+      font-size: 0.66rem;
+      color: var(--text-secondary);
+    }
+
+    .nirs-channel-val {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--accent-green);
+      line-height: 1;
+    }
+
+    .nirs-mini-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .btn-nirs-mini {
+      padding: 4px 2px;
+      font-size: 0.66rem;
+      font-weight: 700;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-nirs-mini:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-nirs-mini.active-ok {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-green);
+      color: #6ee7b7;
+    }
+
+    .btn-nirs-mini.active-warn {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--accent-yellow);
+      color: #fcd34d;
+    }
+
+    .btn-nirs-mini.active-crit {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--accent-red);
+      color: #fca5a5;
+    }
+
+    /* SELECTOR DE RANGOS DE RADIACIÓN */
+    .rad-levels-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      background: #09101d;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-nivel {
+      padding: 6px 4px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .btn-nivel.active-saludable {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-green);
+      color: #6ee7b7;
+    }
+
+    .btn-nivel.active-ligero {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: #7dd3fc;
+    }
+
+    .btn-nivel.active-preocupante {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--accent-yellow);
+      color: #fcd34d;
+    }
+
+    .btn-nivel.active-peligro {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--accent-red);
+      color: #fca5a5;
+    }
+
+    /* QUIMIOSENSORES RONSS */
+    .ronss-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .sensor-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 9px;
+    }
+
+    .sensor-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 3px;
+    }
+
+    .sensor-name {
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .sensor-val {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .sensor-range {
+      font-size: 0.66rem;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 5px;
+      background: #09101d;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.35s ease, background-color 0.35s ease;
+    }
+
+    /* DIAGNÓSTICO Y PROTOCOLO CLÍNICO */
+    .diag-box {
+      background: var(--bg-card);
+      border-left: 4px solid var(--accent-green);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .diag-section {
+      margin-bottom: 8px;
+      font-size: 0.81rem;
+      line-height: 1.45;
+    }
+
+    .diag-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .diag-title {
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 2px;
+    }
+
+    .treatment-card {
+      background: #0a1220;
+      border: 1px solid #1e3a5f;
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .badge-status {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-critical {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border-color: var(--accent-red);
+      animation: pulseAlert 1.2s infinite;
+    }
+
+    @keyframes pulseAlert {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+
+:host { display:block; container-type:inline-size; }
+.monitor { border:1px solid var(--border-color); border-radius:12px; }
+.monitor button:focus-visible,.monitor select:focus-visible,.monitor input:focus-visible { outline:2px solid var(--accent-cyan); outline-offset:2px; }
+.monitor :disabled { cursor:not-allowed; opacity:.6; }
+.monitor canvas { display:block; }
+.monitor-notice { color:var(--text-secondary); margin:4px 0 10px; font-size:.8rem; }
+#monitor-sync { padding-bottom:6px; }
+@container (max-width: 600px) {
+  .sync-group { flex-wrap:wrap; min-width:0; max-width:100%; }
+  .sync-group select { max-width:100%; }
+}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+</style>
+<div class="monitor" lang="es">
+<!-- HEADER -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-dot" id="system-dot"></div>
+      <h2>AEGIS <span>// Crew Biomedical Telemetry</span></h2>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="monitor-pause" aria-pressed="false">Pausar</button>
+      <button class="btn" id="monitor-reset">Reiniciar simulación</button>
+      <select id="baud-rate-select" aria-label="Velocidad del puerto serie" title="Velocidad del puerto serie Arduino">
+        <option value="9600">9600 bps</option>
+        <option value="115200" selected>115200 bps</option>
+      </select>
+      <button class="btn btn-primary" id="btn-connect-usb" data-control-0>🔌 Conectar Arduino (USB)</button>
+      <button class="btn" id="btn-disconnect-usb" data-control-1 style="display:none;">Desconectar USB</button>
+      <span id="usb-status-text" style="font-size:0.78rem; color:var(--text-secondary);">LIVE SIMULATION — SYNTHETIC DATA</span>
+    </div>
+  </header>
+  <p class="monitor-notice">Demostración educativa. El modo USB solo visualiza la señal local; no se comparte con el Companion ni se usa para diagnósticos.</p>
+  <p id="monitor-sync" class="monitor-notice" role="status"></p>
+
+  <!-- BARRA DE CONTROL DE ACOPLAMIENTO BIDIRECCIONAL -->
+  <div class="sync-bar" id="sync-bar">
+    <div class="sync-group">
+      <span style="color:var(--accent-cyan); font-weight:700;">FUENTE DE DATOS:</span>
+      <span id="badge-fuente" class="badge-status">SIMULACIÓN ACTIVA</span>
+    </div>
+
+    <div class="sync-group">
+      <label for="select-ecg-to-quimio">Al simular <b>ECG</b>, dejar Quimiosensores en:</label>
+      <select id="select-ecg-to-quimio" data-control-2>
+        <option value="saludable">Estado Saludable (Basal)</option>
+        <option value="especifico">Radiación Acoplada (Estrés Oxidativo)</option>
+      </select>
+    </div>
+
+    <div class="sync-group">
+      <label for="select-quimio-to-ecg">Al simular <b>Quimiosensores</b>, dejar ECG en:</label>
+      <select id="select-quimio-to-ecg" data-control-3>
+        <option value="normal">Configuración Normal (Perfil)</option>
+        <option value="simulada">Configuración Simulada (Estrés Cardíaco)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="main-grid" id="main-grid">
+
+    <!-- COLUMNA IZQUIERDA: MONITOR ECG Y DIAGNÓSTICO -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Electrocardiograma (Derivación II • AD8232)</span>
+        <div id="sim-ecg-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-ecg btn-active" id="ecg-btn-normal" data-control-4>Normal</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-stemi" data-control-5>Infarto ST</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-fv" data-control-6>Fibrilación Vent.</button>
+          <button class="btn btn-ecg btn-danger" id="ecg-btn-paro" data-control-7>Paro Cardíaco</button>
+          <button class="btn btn-ecg btn-custom" id="ecg-btn-custom" data-control-8>🎛️ Personalizado</button>
+        </div>
+      </div>
+
+      <div class="ecg-container">
+        <canvas id="ecgCanvas" role="img" aria-label="Señal ECG en desplazamiento"></canvas>
+        <div class="ecg-overlay-bpm">
+          <div class="bpm-val" id="val-bpm">77</div>
+          <div class="bpm-label" id="lbl-ritmo">77 LPM • RITMO SINUSAL</div>
+        </div>
+        <div class="usb-live-monitor" id="usb-live-monitor">
+          USB Raw: <span id="usb-raw-val">---</span> | Muestras/s: <span id="usb-rate-val">0</span> | Picos detectados: <span id="usb-beats-val">0</span>
+        </div>
+      </div>
+
+      <!-- CREADOR CUSTOMIZABLE DE ONDA ECG (SLIDERS) -->
+      <div class="custom-ecg-builder" id="custom-ecg-builder">
+        <div class="custom-builder-header">
+          <span class="custom-builder-title">🎛️ Generador Paramétrico de Onda ECG (Personalizado)</span>
+          <button class="btn" style="padding:3px 9px; font-size:0.72rem;" data-control-9>↺ Restablecer Basal</button>
+        </div>
+
+        <div class="custom-sliders-grid">
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Frecuencia (LPM)</span>
+              <span class="slider-val-badge" id="cust-lbl-bpm">75 LPM</span>
+            </div>
+            <input type="range" id="cust-slider-bpm" aria-label="Frecuencia ECG" min="30" max="220" step="1" value="75" data-control-10 />
+            <div class="slider-bounds"><span>30 (Bradi)</span><span>100</span><span>220 (Taqui)</span></div>
+          </div>
+
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Segmento ST (mV)</span>
+              <span class="slider-val-badge" id="cust-lbl-st">+0.00 mV</span>
+            </div>
+            <input type="range" id="cust-slider-st" aria-label="Segmento ST" min="-0.30" max="0.50" step="0.01" value="0.00" data-control-11 />
+            <div class="slider-bounds"><span>-0.30 (Infra)</span><span>0.00</span><span>+0.50 (Supra)</span></div>
+          </div>
+
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Onda P (mV)</span>
+              <span class="slider-val-badge" id="cust-lbl-p">0.12 mV</span>
+            </div>
+            <input type="range" id="cust-slider-p" aria-label="Amplitud P" min="0.00" max="0.30" step="0.01" value="0.12" data-control-12 />
+            <div class="slider-bounds"><span>0.00 (Ausente)</span><span>0.15</span><span>0.30 mV</span></div>
+          </div>
+
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Intervalo PR (ms)</span>
+              <span class="slider-val-badge" id="cust-lbl-pr">150 ms</span>
+            </div>
+            <input type="range" id="cust-slider-pr" aria-label="Intervalo PR" min="80" max="300" step="5" value="150" data-control-13 />
+            <div class="slider-bounds"><span>80 (Corto)</span><span>160</span><span>300 (Bloqueo)</span></div>
+          </div>
+
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Complejo QRS (ms)</span>
+              <span class="slider-val-badge" id="cust-lbl-qrs">88 ms</span>
+            </div>
+            <input type="range" id="cust-slider-qrs" aria-label="Duración QRS" min="60" max="180" step="2" value="88" data-control-14 />
+            <div class="slider-bounds"><span>60 ms</span><span>120</span><span>180 (Ancho)</span></div>
+          </div>
+
+          <div class="slider-control">
+            <div class="slider-control-top">
+              <span>Onda T (mV)</span>
+              <span class="slider-val-badge" id="cust-lbl-t">+0.22 mV</span>
+            </div>
+            <input type="range" id="cust-slider-t" aria-label="Amplitud T" min="-0.40" max="0.60" step="0.02" value="0.22" data-control-15 />
+            <div class="slider-bounds"><span>-0.40 (Inv.)</span><span>+0.20</span><span>+0.60 (Picuda)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÉTRICAS MORFOLÓGICAS -->
+      <div class="metrics-row">
+        <div class="metric-box" id="box-p">
+          <div class="m-label">Onda P</div>
+          <div class="m-val" id="val-p">Presente</div>
+          <div class="m-sub" id="sub-p">Sinusal (+)</div>
+        </div>
+        <div class="metric-box" id="box-pr">
+          <div class="m-label">Intervalo PR</div>
+          <div class="m-val" id="val-pr">150 ms</div>
+          <div class="m-sub" id="sub-pr">Normal (120-200)</div>
+        </div>
+        <div class="metric-box" id="box-qrs">
+          <div class="m-label">Complejo QRS</div>
+          <div class="m-val" id="val-qrs">88 ms</div>
+          <div class="m-sub" id="sub-qrs">Estrecho (&lt;120)</div>
+        </div>
+        <div class="metric-box" id="box-qtc">
+          <div class="m-label">Intervalo QTc</div>
+          <div class="m-val" id="val-qtc">395 ms</div>
+          <div class="m-sub" id="sub-qtc">Normal (&lt;440)</div>
+        </div>
+        <div class="metric-box" id="box-st">
+          <div class="m-label">Segmento ST</div>
+          <div class="m-val" id="val-st">+0.01 mV</div>
+          <div class="m-sub" id="sub-st">Isoeléctrico</div>
+        </div>
+      </div>
+
+      <!-- DIAGNÓSTICO AUTÓNOMO INTEGRADO -->
+      <div class="panel-header" style="margin-top:4px;">
+        <span class="panel-title" id="diag-panel-title">Lectura educativa de señales</span>
+        <span class="badge-status" id="badge-alerta-global">ESTADO NOMINAL</span>
+      </div>
+
+      <div class="diag-box" id="diag-box">
+        <div class="diag-section">
+          <div class="diag-title">1. Electrofisiología Cardíaca:</div>
+          <div id="diag-ecg-text">—</div>
+        </div>
+        <div class="diag-section" id="diag-section-ox">
+          <div class="diag-title">2. Oximetría Dual — Arterial (SpO₂) + Tisular/Cerebral NIRS (StO₂ / rSO₂):</div>
+          <div id="diag-ox-text">—</div>
+        </div>
+        <div class="diag-section" id="diag-section-quimio">
+          <div class="diag-title">3. Estado Redox / Quimiosensores (RONSS):</div>
+          <div id="diag-quimio-text">—</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: SIMULADORES (DESACTIVADA Y OCULTA EN MODO REAL USB) -->
+    <div class="panel" id="right-sim-panel">
+
+      <!-- MÓDULO 1: OXÍMETRO DE PULSO ARTERIAL (SpO2) -->
+      <div class="panel-header">
+        <span class="panel-title">Oxímetro de Pulso (SpO₂ • Arterial)</span>
+        <span style="font-size:0.72rem; color:var(--text-secondary);">Macrocirculación Pulsátil</span>
+      </div>
+
+      <div class="oximeter-card" id="oximeter-card">
+        <div class="ox-header">
+          <div class="ox-readout">
+            <span class="ox-big-val" id="val-spo2">98%</span>
+            <span style="font-size:0.75rem; color:var(--text-secondary);">SpO₂</span>
+          </div>
+          <span class="ox-badge" id="ox-status-badge">SANO (95–100%)</span>
+        </div>
+
+        <div class="ox-presets">
+          <button class="btn-ox active-sano" id="ox-btn-sano" data-control-16>95–100%<br>Sano</button>
+          <button class="btn-ox" id="ox-btn-leve" data-control-17>90–94%<br>Hipoxia Leve</button>
+          <button class="btn-ox" id="ox-btn-moderada" data-control-18>85–89%<br>Hipoxia Mod.</button>
+          <button class="btn-ox" id="ox-btn-grave" data-control-19>≤ 84%<br>Hipoxemia Grave</button>
+        </div>
+
+        <div class="ox-slider-row">
+          <span>60%</span>
+          <input type="range" id="ox-slider" aria-label="SpO₂" min="60" max="100" value="98" data-control-20 />
+          <span>100%</span>
+        </div>
+
+        <div class="ox-action-box" id="ox-action-box">
+          <b style="color:#10b981;">Estado Sano:</b> Saturación arterial normal. Sin necesidad de estudios adicionales ni oxígeno suplementario.
+        </div>
+      </div>
+
+      <!-- MÓDULO 2: OXIMETRÍA TISULAR Y CEREBRAL NIRS (700–1100 nm • SCHEEREN ET AL., 2012) -->
+      <div class="panel-header" style="margin-top:2px;">
+        <span class="panel-title">Oximetría Tisular NIRS (700–1100 nm)</span>
+        <span style="font-size:0.72rem; color:var(--accent-cyan);">Perfusión Microvascular</span>
+      </div>
+
+      <div class="nirs-card" id="nirs-card">
+        <div class="nirs-grid">
+          <!-- CANAL PERIFÉRICO (StO2 Antebrazo / Tenar) -->
+          <div class="nirs-channel">
+            <div class="nirs-channel-top">
+              <div>
+                <div class="nirs-channel-title">StO₂ Periférica</div>
+                <div class="nirs-channel-site">Antebrazo (Rango: 75–90%)</div>
+              </div>
+              <span class="nirs-channel-val" id="val-sto2">84%</span>
+            </div>
+            <div class="ox-slider-row" style="gap:6px;">
+              <span style="font-size:0.65rem;">30%</span>
+              <input type="range" id="sto2-slider" aria-label="StO₂" min="30" max="100" value="84" data-control-21 />
+              <span style="font-size:0.65rem;">100%</span>
+            </div>
+            <div class="nirs-mini-presets">
+              <button class="btn-nirs-mini active-ok" id="sto2-btn-ok" data-control-22>Nominal<br>75–90%</button>
+              <button class="btn-nirs-mini" id="sto2-btn-warn" data-control-23>Alerta<br>&lt; 75%</button>
+              <button class="btn-nirs-mini" id="sto2-btn-crit" data-control-24>Shock<br>≤ 50%</button>
+            </div>
+          </div>
+
+          <!-- CANAL CEREBRAL (rSO2 Corteza Frontal) -->
+          <div class="nirs-channel">
+            <div class="nirs-channel-top">
+              <div>
+                <div class="nirs-channel-title">rSO₂ Cerebral</div>
+                <div class="nirs-channel-site">Frontal (Rango: 55–80%)</div>
+              </div>
+              <span class="nirs-channel-val" id="val-rso2">68%</span>
+            </div>
+            <div class="ox-slider-row" style="gap:6px;">
+              <span style="font-size:0.65rem;">25%</span>
+              <input type="range" id="rso2-slider" aria-label="rSO₂" min="25" max="95" value="68" data-control-25 />
+              <span style="font-size:0.65rem;">95%</span>
+            </div>
+            <div class="nirs-mini-presets">
+              <button class="btn-nirs-mini active-ok" id="rso2-btn-ok" data-control-26>Nominal<br>55–80%</button>
+              <button class="btn-nirs-mini" id="rso2-btn-warn" data-control-27>Baja<br>&lt; 50%</button>
+              <button class="btn-nirs-mini" id="rso2-btn-crit" data-control-28>Crítica<br>&lt; 45%</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ox-action-box" id="nirs-action-box">
+          <b style="color:#10b981;">Perfusión Tisular Nominal:</b> Entrega y consumo de O₂ equilibrados en músculo periférico (StO₂ ≥ 75%) y corteza frontal (rSO₂ ≥ 55%).
+        </div>
+      </div>
+
+      <!-- MÓDULO 3: QUIMIOSENSORES RONSS -->
+      <div class="panel-header" style="margin-top:2px;">
+        <span class="panel-title">Quimiosensores RONSS (Radiación / Redox)</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-quimio btn-active" id="q-btn-basal" data-control-29>Basal</button>
+          <button class="btn btn-quimio" id="q-btn-radiacion" data-control-30>Radiación</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:5px; font-weight:600;">
+          Nivel de Exposición / Severidad de Radiación:
+        </div>
+        <div class="rad-levels-bar">
+          <button class="btn-nivel active-saludable" id="lvl-saludable" data-control-31>Saludable</button>
+          <button class="btn-nivel" id="lvl-ligero" data-control-32>Ligero</button>
+          <button class="btn-nivel" id="lvl-preocupante" data-control-33>Preocupante</button>
+          <button class="btn-nivel" id="lvl-peligro" data-control-34>Peligro</button>
+        </div>
+      </div>
+
+      <div class="ronss-grid">
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#38bdf8;">Peróxido (H₂O₂)</span>
+            <span class="sensor-val" id="val-h2o2">1.20 µM</span>
+          </div>
+          <div class="sensor-range">Saludable: 0.5 – 2.5 µM</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-h2o2" style="width:15%; background:#10b981;"></div></div>
+        </div>
+
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#f59e0b;">Superóxido (O₂•⁻)</span>
+            <span class="sensor-val" id="val-o2">0.15 nM</span>
+          </div>
+          <div class="sensor-range">Saludable: 0.05 – 0.30 nM</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-o2" style="width:18%; background:#10b981;"></div></div>
+        </div>
+
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#ec4899;">Peroxinitrito (ONOO⁻)</span>
+            <span class="sensor-val" id="val-onoo">12 nM</span>
+          </div>
+          <div class="sensor-range">Saludable: 5 – 25 nM</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-onoo" style="width:14%; background:#10b981;"></div></div>
+        </div>
+
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#a855f7;">Óxido Nítrico (NO•)</span>
+            <span class="sensor-val" id="val-no">35 nM</span>
+          </div>
+          <div class="sensor-range">Saludable: 20 – 60 nM</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-no" style="width:35%; background:#10b981;"></div></div>
+        </div>
+
+        <div class="sensor-card" style="grid-column: span 2;">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#10b981;">Glutatión Reducido (GSH — Defensa Antioxidante)</span>
+            <span class="sensor-val" id="val-gsh">4.80 mM</span>
+          </div>
+          <div class="sensor-range">Saludable: 3.5 – 6.0 mM (Peligro &lt; 2.0 mM)</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-gsh" style="width:80%; background:#10b981;"></div></div>
+        </div>
+
+        <div class="sensor-card" style="grid-column: span 2;">
+          <div class="sensor-top">
+            <span class="sensor-name" style="color:#eab308;">Malondialdehído (MDA — Peroxidación Lipídica)</span>
+            <span class="sensor-val" id="val-mda">0.85 µM</span>
+          </div>
+          <div class="sensor-range">Saludable: 0.4 – 1.2 µM</div>
+          <div class="progress-track"><div class="progress-fill" id="bar-mda" style="width:20%; background:#10b981;"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
