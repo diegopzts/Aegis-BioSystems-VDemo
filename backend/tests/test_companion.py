@@ -60,6 +60,11 @@ def test_text_tool_flow_and_fallback(monkeypatch):
         if model == "model-a":
             raise errors.ServerError(503, {"error": {"message": "unavailable"}})
         if config.response_mime_type == "application/json":
+            assert config.response_schema.model_dump(exclude_none=True) == {
+                "type": types.Type.OBJECT,
+                "properties": {"reply": {"type": types.Type.STRING}},
+                "required": ["reply"],
+            }
             return response(types.Part(text=structured))
         if len(contents) == 1:
             return response(gate)

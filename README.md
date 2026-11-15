@@ -59,7 +59,7 @@ Abre [AEGIS BioSystems](http://127.0.0.1:5173/). La [documentación interactiva 
 
 3. Escribe la clave en `GEMINI_API_KEY` y reinicia FastAPI. El encabezado indica si el backend responde. En el panel del asistente, «Gemini sin configurar» indica que falta la clave y «Gemini configurado» indica que se ha leído una clave local. Comprueba el acceso enviando un mensaje.
 
-El backend lee la clave exclusivamente de `backend/.env`. El modelo de texto predeterminado es `gemini-3.8-flash`. La opción `GEMINI_MODEL=auto` consulta el catálogo disponible y prueba hasta cuatro modelos de texto candidatos ante fallos de compatibilidad o del servicio. `GEMINI_LIVE_MODEL=auto` busca modelos conversacionales de Live y prueba modelos de respaldo si falla la conexión inicial. Ambas opciones aceptan un ID explícito. La cuota, los modelos y los permisos dependen del proyecto configurado en AI Studio. Si Live falla, puedes seguir usando el chat de texto.
+El backend lee la clave del entorno del servicio o del archivo local `backend/.env`. El modelo de texto predeterminado es `gemini-3.5-flash`. La opción `GEMINI_MODEL=auto` consulta el catálogo disponible y prueba hasta cuatro modelos de texto candidatos ante fallos de compatibilidad o del servicio. `GEMINI_LIVE_MODEL=auto` busca modelos conversacionales de Live y prueba modelos de respaldo si falla la conexión inicial. Ambas opciones aceptan un ID explícito. La cuota, los modelos y los permisos dependen del proyecto configurado en AI Studio. Si Live falla, puedes seguir usando el chat de texto.
 
 ### Companion y datos de AEGIS
 

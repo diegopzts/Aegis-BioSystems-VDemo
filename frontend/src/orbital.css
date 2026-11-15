@@ -165,7 +165,7 @@
   .orbital-experience.orbital-home .orbit-pilot { position: absolute; inset: 0 0 auto; }
   .orbital-home .voice-orb-panel > div {
     position: absolute;
-    top: min(59svh, 57vw);
+    top: min(calc(68svh - 105px), calc(66vw - 105px));
     padding: 4px 12px;
     border-radius: 8px;
     background: #06091bd9;

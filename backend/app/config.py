@@ -4,7 +4,7 @@ from dotenv import dotenv_values
 
 BACKEND = Path(__file__).resolve().parents[1]
 ENV_FILE = BACKEND / ".env"
-DEFAULT_TEXT_MODEL = "gemini-3.8-flash"
+DEFAULT_TEXT_MODEL = "gemini-3.5-flash"
 env = {**dotenv_values(ENV_FILE, interpolate=False, encoding="utf-8-sig"), **environ}
 API_KEY = (env.get("GEMINI_API_KEY") or "").strip()
 TEXT_MODEL = (env.get("GEMINI_MODEL") or "").strip() or DEFAULT_TEXT_MODEL

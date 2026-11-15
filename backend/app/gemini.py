@@ -202,13 +202,19 @@ def generate_turn(google, model, request, changes, deadline) -> ChatReply:
         raise CompanionError(502, "Gemini exceeded the tool-call limit. Try a narrower question.")
 
     ensure_current()
+    # Keep the provider schema to supported fields. ReplyText still rejects extras locally.
+    reply_schema = types.Schema(
+        type=types.Type.OBJECT,
+        properties={"reply": types.Schema(type=types.Type.STRING)},
+        required=["reply"],
+    )
     response = google.models.generate_content(
         model=model, contents=[
             *contents,
             types.Content(role="user", parts=[types.Part(text="Return the preceding answer as the reply field.")]),
         ],
         config=types.GenerateContentConfig(
-            **settings, response_mime_type="application/json", response_schema=ReplyText, http_options=remaining_timeout(),
+            **settings, response_mime_type="application/json", response_schema=reply_schema, http_options=remaining_timeout(),
         ),
     )
     try:
